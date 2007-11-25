@@ -1,0 +1,9 @@
+Changes
+lib/WWW/Mechanize/Plugin/DOM.pm
+lib/WWW/Mechanize/Plugin/JavaScript/JE.pm
+lib/WWW/Mechanize/Plugin/JavaScript.pm
+Makefile.PL
+MANIFEST
+README
+TODO
+META.yml                                 Module meta-data (added by MakeMaker)

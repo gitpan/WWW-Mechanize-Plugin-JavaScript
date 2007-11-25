@@ -1,0 +1,61 @@
+WWW::Mechanize::Plugin::JavaScript and ::DOM, version 0.001 (alpha)
+
+Plugins for WWW::Mechanize that provide HTML DOM and Java-
+Script support.
+
+This set of modules is at a very early stage. Only a few features have
+been implemented so far. Whether it will work for a particular case is
+hard to say. Try it and see. (And patches are always welcome.)
+
+
+INSTALLATION
+
+The easiest way to install this module is to use the CPAN module or
+the cpan script:
+
+    [sudo] perl -MCPAN -e "install WWW::Mechanize::Plugin::JavaScript"
+
+    [sudo] cpan WWW::Mechanize::Plugin::JavaScript
+
+Or you can use the following:
+
+    perl Makefile.PL
+    make
+    make test
+    [sudo] make install
+
+
+DEPENDENCIES
+
+This module requires:
+
+- perl 5.8.3 or later
+
+- JE 0.019 or later
+
+- HTML::DOM 0.009 or later
+
+- The experimental version of WWW::Mechanize available at
+  http://www-mechanize.googlecode.com/svn/branches/plugins/
+
+
+DOCUMENTATION
+
+After installing, you can find documentation for these modules with
+the perldoc command.
+
+    perldoc WWW::Mechanize::Plugin::JavaScript
+    perldoc WWW::Mechanize::Plugin::DOM
+
+Or try using man (it's faster, in my experience):
+
+    man WWW::Mechanize::Plugin::JavaScript
+    man WWW::Mechanize::Plugin::DOM
+
+
+COPYRIGHT AND LICENCE
+
+Copyright © 2007 Father Chrysostomos
+
+This program is free software; you may redistribute it and/or modify
+it under the same terms as perl.

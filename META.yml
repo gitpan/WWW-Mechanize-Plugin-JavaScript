@@ -1,0 +1,21 @@
+# http://module-build.sourceforge.net/META-spec.html
+#XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
+name:         WWW-Mechanize-Plugin-JavaScript
+version:      0.001
+version_from: lib/WWW/Mechanize/Plugin/JavaScript.pm
+installdirs:  site
+requires:
+    Carp:                          0
+    Encode:                        0
+    HTML::DOM:                     0.009
+    HTML::DOM::Interface:          0
+    HTTP::Headers::Util:           0
+    JE:                            0.019
+    LWP::Simple:                   0
+    Scalar::Util:                  0
+    strict:                        0
+    URI:                           0
+    warnings:                      0
+
+distribution_type: module
+generated_by: ExtUtils::MakeMaker version 6.30

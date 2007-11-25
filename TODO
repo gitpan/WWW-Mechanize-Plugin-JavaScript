@@ -1,0 +1,6 @@
+
+trigger event handlers
+finish adding mech callback routines
+write tests
+finish adding browser-only js features (i.e., non-DOM stuff like navigator, location, window properties/methods and whatever else)
+whatever else I've forgotten

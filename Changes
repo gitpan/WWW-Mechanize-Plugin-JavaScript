@@ -1,0 +1,25 @@
+Revision history for WWW::Mechanize::Plugin::JavaScript and ::DOM
+
+0.001   24 November, 2007
+        First CPAN release
+        • The JavaScript plugin has been completely restructured. It
+          now supports multiple backends.
+        • It now allows one to provide an initialisation function that
+          is run whenever a JavaScript environment is created, as well
+          as custom alert, confirm and prompt functions.
+        • Allows binding of custom Perl classes via 'bind_classes'.
+        • The DOM plugin’s callback routines  for  fetching  the  page
+          content as HTML or text now check to see whether the page is
+          HTML first.
+        • The DOM plugin now overrides extract_forms.
+        • Started work on event-handling.
+        • A few other minor things
+
+0.0.2   19 July, 2007
+        Updated ::DOM to work with a new patch for WWW::Mechanize
+        (modified according to Eric Wilhelm's suggestion) 
+
+0.0.1   17 July, 2007
+        A proof-of-concept sent to Andy Lester and to the LWP mailing
+        list.  Requires a  patch  to  WWW::Mechanize  (also  sent  to
+        the list).
