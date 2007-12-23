@@ -4,8 +4,9 @@ use strict;   # :-(
 use warnings; # :-(
 
 use Scalar::Util qw'weaken';
+use Time::HiRes 'time';
 
-our $VERSION = '0.001';
+our $VERSION = '0.002';
 
 # Attribute constants (array indices)
 sub mech() { 0 }
@@ -16,10 +17,12 @@ sub init_cb() { 3 } # callback routine that's called whenever a new js
 sub alert()   { 4 }
 sub confirm() { 5 }
 sub prompt()  { 6 }
+sub cb() { 7 } # class bindings
+sub tmout() { 8 } # timeouts
 
 {no warnings; no strict;
 undef *$_ for qw/mech jsbe benm init_cb
-                  alert confirm prompt/} # These are PRIVATE constants!
+                alert confirm prompt tmout/} # These are PRIVATE constants!
 
 sub init { # expected to return a plugin object that the mech object will
            # use to communicate with the plugin.
@@ -30,24 +33,26 @@ sub init { # expected to return a plugin object that the mech object will
 	weaken $self->[mech];
 
 	my $scripter = sub {
-		my($doc,$code,$url,$line,$inline) = @_;
+		my($mech,$doc,$code,$url,$line,$inline) = @_;
 
 		$code =~ s/^\s*<!--[^\cm\cj\x{2028}\x{2029}]*(?x:
-		         )(?:\cm\cj?|[\cj\x{2028}\x{2029}])// if $inline;
+		         )(?:\cm\cj?|[\cj\x{2028}\x{2029}])//
+			and ++$line if $inline;
 
 #warn $code if $inline;
 #warn $url unless $inline;
 		
-		my $be = $self->_start_engine;
+		my $be = $mech->plugin('JavaScript')->_start_engine;
 
 		$be->eval($code, $url, $line);
 		$@ and $mech->warn($@);
 	};
 
 	my $event_attribute_handler = sub {
-		my($elem,undef,$code) = @_;
+		my($mech,$elem,undef,$code) = @_;
 
-		my $func = $self->_start_engine->event2sub($code, $elem);
+		my $func = $mech->plugin('JavaScript')->
+			_start_engine->event2sub($code, $elem);
 
 		sub {
 			my $event_obj = shift;
@@ -136,11 +141,16 @@ sub _start_engine {
 	$self->[jsbe] = "WWW::Mechanize::Plugin::JavaScript::$$self[benm]"
 		-> new;
 	require HTML::DOM::Interface;
+	require CSS::DOM::Interface;
 	for ($$self[jsbe]) {
 		$_->bind_classes(\%HTML::DOM::Interface);
+		$_->bind_classes(\%CSS::DOM::Interface);
 		$_->bind_classes(
 		  \%WWW::Mechanize::Plugin::JavaScript::Location::Interface
 		);
+		for my $__(@{$self->[cb]||[]}){
+			$_->bind_classes($__)
+		}
 		$_->set(document => $self->[mech]->plugin('DOM')->tree);
 		$_->new_function(alert =>  # ~~~ reasonable default ?
 			$$self[alert] || sub { print @_, "\n" });
@@ -161,14 +171,52 @@ sub _start_engine {
 		});
 		$_->define_setter(location => $s);
 		$_->set(navigator => userAgent => $$self[mech]->agent);
+		$_->set(navigator => appName => 'WWW::Mechanize');
+		$_->new_function(setTimeout => sub {
+			my $time = time;
+			my ($code, $ms) = @_;
+			$ms /= 1000;
+			$self->[tmout][my $id = @{$self->[tmout]}] =
+				[$ms+$time, $code];
+			return $id;
+		}, 'Number');
+		$_->new_function(clearTimeout => sub {
+			delete $self->[tmout][shift];
+			return;
+		});
+		$_->set('screen', {});
+		$_->new_function(open => sub {
+			$self->[mech]->get(shift);
+			# ~~~ Just a placeholder for now.
+		});
 	} # for $$self->[jsbe];
 	{ ($self->[init_cb]||next)->($self); }
+	weaken $self; # closures
 	return $$self[jsbe];
 }
 
-for(qw/bind_classes set eval new_function/) {
+sub bind_classes {
+	my $plugin = shift;
+	push @{$plugin->[cb]}, $_[0];
+	$plugin->[jsbe] && $plugin->[jsbe]->bind_classes($_[0]);
+}
+
+for(qw/set eval new_function/) {
 	no strict 'refs';
 	*$_ = eval "sub { shift->_start_engine->$_(\@_) }";
+}
+
+sub check_timeouts {
+	my $time = time;
+	my $self = shift;
+	local *_;
+	for my $id(0..$#{$self->[tmout]}) {
+		next unless $_ = $self->[tmout][$id];
+		$$_[0] >= $time and
+			$self->[jsbe]->eval($$_[1]),
+			delete $self->[tmout][$id];
+	}
+	return
 }
 
 
@@ -178,7 +226,7 @@ use URI;
 use HTML::DOM::Interface qw'STR METHOD VOID';
 use Scalar::Util 'weaken';
 
-our $VERSION = '0.001';
+our $VERSION = '0.002';
 
 sub uri(){0};
 sub mech(){1};
@@ -323,7 +371,7 @@ WWW::Mechanize::Plugin::JavaScript - JavaScript plugin for WWW::Mechanize
 
 =head1 VERSION
 
-Version 0.001
+Version 0.002
 
 B<WARNING:> This is an alpha release. The API is subject to change 
 without
@@ -434,13 +482,57 @@ as a separate argument:
 =item bind_classes
 
 With this you can bind Perl classes to JavaScript, so that JavaScript can
-handle objects of those classes. You should pass a hash ref that has the
+handle objects of those classes. These class bindings will persist from one
+page to the next.
+
+You should pass a hash ref that has the
 structure described in L<HTML::DOM::Interface>, except that this method
 also accepts a C<< _constructor >> hash element, which should be set to the
 name of the method to be called when the constructor function is called
 within JavaScript; e.g., C<< _constructor => 'new' >>.
 
+=item check_timeouts
+
+This will evaluate the code associated with each timeout registered with 
+the JS C<setTimeout> function,
+if the appropriate interval has elapsed.
+
 =back
+
+=head1 JAVASCRIPT FEATURES
+
+The members of the HTML DOM that are available depend on the versions of
+L<HTML::DOM> and L<CSS::DOM> installed. See L<HTML::DOM::Interface> and
+L<CSS::DOM::Interface>.
+
+The objects and properties specific to browsers that are supported so far
+are:
+
+  location
+      .hash
+      .host
+      .hostname
+      .href
+      .pathname
+      .port
+      .protocol
+      .search
+      .reload()
+      .replace()
+  document
+      .location (alias to the global var)
+  alert()
+  navigator
+      .userAgent (same as $mech->agent)
+      .appName (WWW::Mechanize)
+  setTimeout()
+  clearTimeout()
+  screen (just an empty object)
+  open()
+
+C<open> is a temporary placeholder. Right now it ignores all its args
+except the first, and goes to the given URL, such that C<open(foo)> is 
+equivalent to C<location = foo>.
 
 =head1 BACK ENDS
 
@@ -448,15 +540,46 @@ A back end has to be in the WWW::Mechanize::Plugin::JavaScript:: name
 space. It will be C<require>d by this plugin implicitly when its name is
 passed to the C<engine> option.
 
-It must provide a class method named C<new>. This method
+The following methods must be implemented:
+
+=head2 Class methods
+
+=over 4
+
+=item new
+
+This method
 simply has to create a JavaScript environment, with C<window> and C<self>
 properties
 that refer to the global object, and return an object.
 
-The object must have methods corresponding to those listed above for
-the plugin object. Those methods are simply delegated to the back end.
+=back
 
-In addition, an object method named C<event2sub> must exist. It will be
+=head2 Object Methods
+
+=over 4
+
+=item eval
+
+=item new_function
+
+=item set
+
+=item bind_classes
+
+These correspond to those 
+listed above for
+the plugin object. Those methods are simply delegated to the back end, 
+except that C<bind_classes> also does some caching if the back end hasn't
+been initialised yet.
+
+C<new_function> must also accept a third argument, indicating the return
+type. This (when specified) will be the name of a JavaScript function that
+does the type conversion. Only 'Number' is used right now.
+
+=item event2sub
+
+This method will be
 passed the source code for an event handler as the first argument, and the
 element to which it belongs as the second argument. It needs to turn that
 event handler code into a
@@ -467,17 +590,19 @@ value, if
 defined, will be used to determine whether the event's C<preventDefault>
 method should be called.
 
-You also need to provide a C<define_setter> method. This will be called
+=item define_setter
+
+This will be called
 with a list of property names representing the 'path' to the property. The
 last argument will be a coderef that must be called with the value assigned
 to the property.
 
 =head1 PREREQUISITES
 
-perl 5.8.3 or later (actually, this module doesn't use any features that
-perl 5.6 doesn't provide, but its prerequisites require 5.8.3)
+perl 5.8.0 or later (actually, this module doesn't use any features that
+perl 5.6 doesn't provide, but its prerequisites require 5.8.0)
 
-HTML::DOM 0.009 or later
+HTML::DOM 0.010 or later
 
 JE 0.019 or later (when there is a SpiderMonkey binding available it will 
 become optional)
@@ -485,41 +610,20 @@ become optional)
 The experimental version of WWW::Mechanize available at
 L<http://www-mechanize.googlecode.com/svn/branches/plugins/>
 
+CSS::DOM
+
 =head1 BUGS
 
-Need plenty of placeholders here :-)
+Apart from the fact that this module is so incomplete, here's one known 
+bug:
 
 =over 4
 
 =item *
 
-=item *
-
-=item *
-
-=item *
-
-=item *
-
-=item *
-
-=item *
-
-=item *
-
-=item *
-
-=item *
-
-=item *
-
-=item *
-
-=item *
-
-=item *
-
-=item *
+If tainting is enabled, any data that come from an HTML page or from JS
+code on that page should be tainted. Currently this is not always the case.
+It is fairly trivial for JS code to untaint its own data.
 
 =back
 

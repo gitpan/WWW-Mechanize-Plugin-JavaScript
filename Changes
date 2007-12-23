@@ -1,5 +1,38 @@
 Revision history for WWW::Mechanize::Plugin::JavaScript and ::DOM
 
+0.002   23 December, 2007
+        The DOM plugin:
+        • The DOM plugin’s interface has changed.  The  callback  rou-
+          tines passed to it now get a WWW::Mechanize object as their
+          first argument.
+        • Line numbers for inline scripts now work properly.
+        The JavaScript plugin:
+        • You can now set up class bindings before fetching the first
+          page (it used to die).
+        • CSS::DOM is now a prerequisite.
+        • setTimeout and clearTimeout have been added, along with the
+          check_timeouts plugin method.
+        • There is now a ‘screen’ object, but it has no properties.
+          You have to  set  them  yourself  with  an  ‘init’  call-
+          back routine.
+        • There is an  ‘open’  method which simply moves to the  next
+          page, ignoring all arguments except the first. It is just a
+          temporary placeholder.
+        • The navigator object now has an appName property, set to
+          WWW::Mechanize.
+        • Back-ends are now expected to accept a third argument to
+          new_function, indicating the return type (the JE binding
+          supports this of course :-).
+        • JavaScript code referenced in the page itself (as opposed to
+          code passed to the plugin’s eval method)  used to  be  evalu-
+          ated in the same JS environment  for  all  pages.  This  has
+          been fixed.
+        JE back end:
+        • JS event handlers for HTML elements now have the form in the
+          scope chain.  (This applies to  all  elements  that  have  a
+         ‘form’ method.)
+        • JS event handlers now have the ‘this’ value set correctly.
+
 0.001   24 November, 2007
         First CPAN release
         • The JavaScript plugin has been completely restructured. It

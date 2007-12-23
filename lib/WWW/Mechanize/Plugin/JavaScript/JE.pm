@@ -8,7 +8,7 @@ use HTML::DOM::Interface ':all'; # for the constants
 use JE 0.019;
 use Scalar::Util qw'weaken';
 
-our $VERSION = '0.001';
+our $VERSION = '0.002';
 our @ISA = 'JE';
 
 # No need to implement eval and new_function, since JE's methods
@@ -124,9 +124,13 @@ sub event2sub {
 	# would fail without  this,  because  the  })  would  be  com-
 	# mented out too.)
 	my $func = ($w->compile("(function(){ $code\n })") || die $@)
-		->execute($w, bless [$w, $w->upgrade($elem)], 'JE::Scope');
+		->execute($w, bless [
+			$w,
+			$elem->can('form') ? $w->upgrade($elem->form) : (),
+			my $wrapper=($w->upgrade($elem))
+		], 'JE::Scope');
 
-	sub { my $ret = $func->();
+	sub { my $ret = $func->apply($wrapper);
 	      return typeof $ret eq 'undefined' ? undef : $ret };
 }
 
@@ -143,6 +147,18 @@ sub define_setter {
 	}
 	$obj->prop({name=>$prop, store=>sub{$cref->($_[1])}});
 	return;
+}
+
+sub new_function {
+	my($self, $name, $sub, $type) = @_;
+	if(defined $type) {
+		$self->new_function(
+			$name => sub { $self->{$type}->($sub->(@_)) }
+		);
+		weaken $self;
+	} else {
+		shift->SUPER::new_function(@_);
+	}
 }
 
 
@@ -318,6 +334,10 @@ our @ISA = 'WWW::Mechanize::Plugin::JavaScript::NodeList';
 
 WWW::Mechanize::Plugin::JavaScript::JE - JE backend for WMPJS
 
+=head1 VERSION
+
+0.002 (alpha)
+
 =head1 DESCRIPTION
 
 This little module is a bit of duct tape to connect the JavaScript plugin
@@ -327,7 +347,7 @@ L<WWW::Mechanize::Plugin::JavaScript>.
 
 =head1 REQUIREMENTS
 
-HTML::DOM 0.009 or later
+HTML::DOM 0.008 or later
 
 JE 0.019 or later
 

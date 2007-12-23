@@ -2,5 +2,8 @@
 trigger event handlers
 finish adding mech callback routines
 write tests
-finish adding browser-only js features (i.e., non-DOM stuff like navigator, location, window properties/methods and whatever else)
+finish adding browser-only js features (i.e., non-DOM stuff like navigator, window properties/methods and whatever else)
+frames
+windows
+figure out a way to make AbstractViews work (window == window.document.defaultView)
 whatever else I've forgotten

@@ -7,7 +7,7 @@ use ExtUtils::MakeMaker;
 # tributed individually:
 %dom_prq = (
 	Encode              => 0,
-	HTML::DOM           =>  .009, # event_handler
+	HTML::DOM           =>  .010, # content_offset
 	HTTP::Headers::Util => 0,
 	LWP::Simple         => 0, # temporary prerq
 	Scalar::Util        => 0,
@@ -16,11 +16,16 @@ use ExtUtils::MakeMaker;
 	warnings            => 0,
 );
 %js_prq = (
+	CSS::DOM::Interface  => 0,
 	HTML::DOM::Interface => 0,
 	Scalar::Util         => 0,
 	strict               => 0,
+	Time::HiRes          => 0,
 	URI                  => 0,
 	warnings             => 0,
+# for testing:
+	Test::More => 0,
+	URI::file  => 0,
 );
 %je_prq = (
 	Carp                 => 0,

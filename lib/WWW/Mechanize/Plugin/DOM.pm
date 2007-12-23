@@ -4,13 +4,15 @@ package WWW::Mechanize::Plugin::DOM;
 # languages may use DOM as well. Anyone have time to implement Acme::Chef
 # bindings for Mech? :-)
 
-$VERSION = '0.001';
+$VERSION = '0.002';
+
+use 5.006;
 
 use strict;
 use warnings;
 
 use Encode qw'encode decode';
-use HTML::DOM 0.009;
+use HTML::DOM 0.010;
 use HTTP::Headers::Util 'split_header_words';
 use Scalar::Util 'weaken';
 
@@ -89,7 +91,7 @@ sub _parse_html {
 			elsif($input_type eq 'reset') {
 				$target->form->reset;
 				# ~~~ not currently supported by HTML::DOM
-				#     (.009)
+				#     (.010)
 			}
 		}
 		if($type eq 'submit' && $tag eq 'form') {
@@ -118,7 +120,7 @@ sub _parse_html {
 			    defined $lang or $lang = $script_type;
 
 			    my $uri;
-			    my($inline, $code, ) = 0;
+			    my($inline, $code, $line) = 0;
 			    if($uri = $elem->attr('src')) {
 			        # ~~~ Is there some way to get the
 			        #     Mech object to do this with-
@@ -134,11 +136,17 @@ sub _parse_html {
 			        # ~~~ I probably need to provide better
 			        #     diagnostics. Maybe I can't use
 			        #     LWP::Simple.
+			        
+			        $line = 1;
 			    }
 			    else {
 			        $code = $elem->firstChild->data;
 			        ++$inline;
 			        $uri = $mech->uri;
+			        $line = 1 + (() =
+			            substr($src,0,$elem->content_offset)
+			                =~ /\cm\cj?|[\cj\x{2028}\x{2029}]/g
+			        );
 			    };
 	
 			    SCRIPT_HANDLER: {
@@ -146,17 +154,13 @@ sub _parse_html {
 			          %{$$self{script_handlers}}) {
 			        next if $lang_re eq 'default';
 			        $lang =~ $lang_re and
-			            &$handler($tree, $code,
-					$uri, 1, $inline),
-			        # ~~~ That line number (1) is currently
-			        #    invalid for almost all inline scripts.
+			            &$handler($mech, $tree, $code,
+					$uri, $line, $inline),
 			            last SCRIPT_HANDLER;
 			    } # end of while
 			    &{ $$self{script_handlers}{default} ||
-			        return }($tree, $code,
-					$uri, 1, $inline);
-			        # ~~~ That line number (1) is currently
-			        #    invalid for almost all inline scripts.
+			        return }($mech,$tree, $code,
+					$uri, $line, $inline);
 			    } # end of S_H
 			});
 
@@ -179,11 +183,12 @@ sub _parse_html {
 				    %{$$self{event_attr_handlers}}) {
 					next if $lang_re eq 'default';
 					$lang =~ $lang_re and
-					    &$handler($elem, $event,$code),
+					    &$handler($mech, $elem,
+				                $event,$code),
 					    last HANDLER;
 				}} # end of if-while
 				&{ $$self{event_attr_handlers}{default} ||
-					return }($elem, $event,$code);
+				    return }($mech,$elem, $event,$code);
 				} # end of HANDLER
 			});
 		}
@@ -244,6 +249,10 @@ sub DESTROY {
 
 WWW::Mechanize::Plugin::DOM - HTML Document Object Model plugin for Mech
 
+=head1 VERSION
+
+0.002 (alpha)
+
 =head1 SYNOPSIS
 
   use WWW::Mechanize;
@@ -262,12 +271,12 @@ WWW::Mechanize::Plugin::DOM - HTML Document Object Model plugin for Mech
   );
 
   sub script_handler {
-          my($dom_tree, $code, $url, $line, $is_inline) = @_;
+          my($mech, $dom_tree, $code, $url, $line, $is_inline) = @_;
           # ... code to run the script ...
   }
 
   sub event_attr_handler {
-          my($elem, $event_name, $code) = @_;
+          my($mech, $elem, $event_name, $code) = @_;
           # ... code that returns a coderef ...
   }
 
@@ -275,15 +284,91 @@ WWW::Mechanize::Plugin::DOM - HTML Document Object Model plugin for Mech
 
 =head1 DESCRIPTION
 
-blah blah blah
+This is a plugin for L<WWW::Mechanize> that provides support for the HTML
+Document Object Model. This is a part of the 
+L<WWW::Mechanize::Plugin::JavaScript> distribution, but it can be used on
+its own.
 
-(event_attr|script)_handlers => {default => ... } is used when the script 
-elem has no
-'type' or 'language' attribute, and there is no Content-Script-Type header.
+=head1 USAGE
+
+To enable this plugin, use Mech's C<use_plugin> method, as shown in the
+synopsis.
+
+To access the DOM tree, use C<< $mech->plugin('DOM')->tree >>, which 
+returns an HTML::DOM object.
+
+You may provide a subroutine that runs an inline script like this:
+
+  $mech->use_plugin('DOM',
+      script_handlers => {
+          qr/.../ => sub { ... },
+          qr/.../ => sub { ... },
+          # etc
+      }
+  );
+
+And a subroutine for turning HTML event attributes into subroutines, like
+this:
+
+  $mech->use_plugin('DOM',
+      event_attr_handlers => {
+          qr/.../ => sub { ... },
+          qr/.../ => sub { ... },
+          # etc
+     }
+  );
+
+In both cases, the C<qr/.../> should be a regular expression that matches
+the scripting language to which the handler applies, or the string
+'default'. The scripting language will be either a MIME type or the
+contents of the C<language> attribute if a script element's C<type>
+attribute is not present. The subroutine specified as the 'default' will be
+used if there is no handler for the scripting language in question or if
+there is no Content-Script-Type header and, for 
+C<script_handlers>, the script element has no
+'type' or 'language' attribute.
+
+Each time you move to another page with WWW::Mechanize, a different copy
+of the DOM plugin object is created. So, if you must refer to in a callback
+routine, don't use a closure, but get it from the C<$mech> object that is
+passed as the first argument.
+
+=head1 PREREQUISITES
+
+L<HTML::DOM> 0.010 or later
+
+L<WWW::Mechanize>
+
+The current stable release of L<WWW::Mechanize> does not support plugins. 
+See
+L<WWW::Mechanize::Plugin::JavaScript> for more info.
 
 =head1 BUGS
 
-The line number passed to script handlers is currently always 1,
-which is usually wrong 
-if the
-script is inline.
+=over 4
+
+=item *
+
+Handlers passed to C<event_attr_handlers> are currently not given any URL
+or line number information.
+
+=item *
+
+Event handlers like onload and onunload are not yet supported. Some events
+do not yet do everything they are supposed to; e.g., a link's C<click>
+method does not go to the next page. (This is actually a DOM plugin bug.)
+
+=item *
+
+This plugin does not yet provide WWW::Mechanize with all the necessary
+callback routines (for C<extract_images>, etc.).
+
+=back
+
+=head1 SEE ALSO
+
+L<WWW::Mechanize::Plugin::JavaScript>
+
+L<WWW::Mechanize>
+
+L<HTML::DOM>

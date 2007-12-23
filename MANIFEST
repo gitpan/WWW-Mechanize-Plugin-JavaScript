@@ -2,6 +2,8 @@ Changes
 lib/WWW/Mechanize/Plugin/DOM.pm
 lib/WWW/Mechanize/Plugin/JavaScript/JE.pm
 lib/WWW/Mechanize/Plugin/JavaScript.pm
+t/bugs.t
+t/die.html
 Makefile.PL
 MANIFEST
 README
