@@ -6,7 +6,7 @@ use warnings; # :-(
 use Scalar::Util qw'weaken';
 use Time::HiRes 'time';
 
-our $VERSION = '0.002';
+our $VERSION = '0.003';
 
 # Attribute constants (array indices)
 sub mech() { 0 }
@@ -49,10 +49,10 @@ sub init { # expected to return a plugin object that the mech object will
 	};
 
 	my $event_attribute_handler = sub {
-		my($mech,$elem,undef,$code) = @_;
+		my($mech,$elem,undef,$code,$url,$line) = @_;
 
 		my $func = $mech->plugin('JavaScript')->
-			_start_engine->event2sub($code, $elem);
+			_start_engine->event2sub($code,$elem,$url,$line);
 
 		sub {
 			my $event_obj = shift;
@@ -212,12 +212,20 @@ sub check_timeouts {
 	local *_;
 	for my $id(0..$#{$self->[tmout]}) {
 		next unless $_ = $self->[tmout][$id];
-		$$_[0] >= $time and
+		$$_[0] <= $time and
 			$self->[jsbe]->eval($$_[1]),
 			delete $self->[tmout][$id];
 	}
 	return
 }
+
+# ~~~ This is experimental. The purposed for this is that code that relies
+#     on a particular version of a JS back end can check to see which back
+#     end is being used before doing Foo->VERSION($bar). The problem with
+#     it is that it returns nothing unless the JS environment has already
+#     been loaded. If we have it start the JS engine, we may load it and
+#     then not use it.
+sub engine { shift->[benm] }
 
 
 package WWW::Mechanize::Plugin::JavaScript::Location;
@@ -371,7 +379,7 @@ WWW::Mechanize::Plugin::JavaScript - JavaScript plugin for WWW::Mechanize
 
 =head1 VERSION
 
-Version 0.002
+Version 0.003
 
 B<WARNING:> This is an alpha release. The API is subject to change 
 without
@@ -419,7 +427,8 @@ hash-style arguments and they are as follows:
 
 Which JavaScript back end to use. Currently, this module only supports
 L<JE>, a pure-Perl JavaScript interpreter. Later it will support
-SpiderMonkey via the L<JavaScript::SpiderMonkey> module. If this option is
+SpiderMonkey via either L<JavaScript::SpiderMonkey> or 
+L<JavaScript.pm|JavaScript>. If this option is
 not specified, either SpiderMonkey or JE will be used, whichever is
 available. It is possible to
 write one's own bindings for a particular JavaScript engine. See below,
@@ -577,13 +586,11 @@ C<new_function> must also accept a third argument, indicating the return
 type. This (when specified) will be the name of a JavaScript function that
 does the type conversion. Only 'Number' is used right now.
 
-=item event2sub
+=item event2sub ($code, $elem, $url, $first_line)
 
-This method will be
-passed the source code for an event handler as the first argument, and the
-element to which it belongs as the second argument. It needs to turn that
-event handler code into a
-coderef, on an object that can be used as such, and then return it. That 
+This method needs to turn the
+event handler code in C<$code> into a
+coderef, or an object that can be used as such, and then return it. That 
 coderef will be
 called with an HTML::DOM::Event object as its sole argument. It's return 
 value, if
@@ -599,12 +606,12 @@ to the property.
 
 =head1 PREREQUISITES
 
-perl 5.8.0 or later (actually, this module doesn't use any features that
-perl 5.6 doesn't provide, but its prerequisites require 5.8.0)
+perl 5.8.3 or later (actually, this module doesn't use any features that
+perl 5.6 doesn't provide, but its prerequisites require 5.8.3)
 
 HTML::DOM 0.010 or later
 
-JE 0.019 or later (when there is a SpiderMonkey binding available it will 
+JE 0.022 or later (when there is a SpiderMonkey binding available it will 
 become optional)
 
 The experimental version of WWW::Mechanize available at
@@ -614,18 +621,9 @@ CSS::DOM
 
 =head1 BUGS
 
-Apart from the fact that this module is so incomplete, here's one known 
-bug:
+(See also L<WWW::Mechanize::Plugin::DOM/Bugs>.)
 
-=over 4
-
-=item *
-
-If tainting is enabled, any data that come from an HTML page or from JS
-code on that page should be tainted. Currently this is not always the case.
-It is fairly trivial for JS code to untaint its own data.
-
-=back
+To report bugs, please e-mail the author.
 
 =head1 AUTHOR & COPYRIGHT
 

@@ -6,4 +6,7 @@ finish adding browser-only js features (i.e., non-DOM stuff like navigator, wind
 frames
 windows
 figure out a way to make AbstractViews work (window == window.document.defaultView)
+revisit the event handler scope chain; make sure it has everything it's supposed to; document it
 whatever else I've forgotten
+
+fix the encoding bug (a form submitted is not in the same encoding as the page) (also have a look at HTML::Encoding and see whether it could be helpful)

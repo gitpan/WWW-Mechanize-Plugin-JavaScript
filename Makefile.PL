@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 require 5.006;
 use ExtUtils::MakeMaker;
@@ -6,6 +6,7 @@ use ExtUtils::MakeMaker;
 # I’m keeping these separate, in case these modules should ever be dis-
 # tributed individually:
 %dom_prq = (
+	Carp                => 0,
 	Encode              => 0,
 	HTML::DOM           =>  .010, # content_offset
 	HTTP::Headers::Util => 0,
@@ -14,6 +15,10 @@ use ExtUtils::MakeMaker;
 	strict              => 0,
 	URI                 => 0,
 	warnings            => 0,
+# for testing:
+	lib        => 0,
+	Test::More => 0,
+	URI::file  => 0,
 );
 %js_prq = (
 	CSS::DOM::Interface  => 0,
@@ -24,16 +29,21 @@ use ExtUtils::MakeMaker;
 	URI                  => 0,
 	warnings             => 0,
 # for testing:
+	lib        => 0,
 	Test::More => 0,
 	URI::file  => 0,
 );
 %je_prq = (
 	Carp                 => 0,
 	HTML::DOM::Interface => 0,
-	JE                   =>  .019, # scalar context for methods passed
-	Scalar::Util         => 0,      # to bind_class
+	JE                   =>  .022, # bind_class’s unwrap option
+	Scalar::Util         => 0,   
 	strict               => 0,
 	warnings             => 0,
+# for testing:
+	lib        => 0,
+	Test::More => 0,
+	URI::file  => 0,
 );
 
 for(\(%dom_prq, %js_prq, %je_prq)) {
@@ -42,6 +52,13 @@ for(\(%dom_prq, %js_prq, %je_prq)) {
 			unless exists $prq{$k} and $$_{$k} < $prq{$k};
 	}
 }
+
+eval{require WWW::Mechanize}
+	&& WWW::Mechanize->can('use_plugin')
+or $prq{WWW::Mechanize} = 9999, print <<, "\n" ;
+This module requires the experimental version of WWW::Mechanize that
+is to be found at the following URL:
+http://www-mechanize.googlecode.com/svn/branches/plugins/
 
 WriteMakefile(
     NAME                => 'WWW::Mechanize::Plugin::JavaScript',

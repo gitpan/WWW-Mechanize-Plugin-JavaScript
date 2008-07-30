@@ -1,5 +1,39 @@
 Revision history for WWW::Mechanize::Plugin::JavaScript and ::DOM
 
+0.003   ??
+	The DOM plugin:
+        • Event attribute handlers now receive URL and line
+          number info.
+	• On a page that has no Content-Script-Type header, a
+          script element with no language specified no longer
+          causes warnings.
+        • It used to be that,  if multiple script elements  or  event
+          attributes that used the same handler, and that handler was
+          passed to the plugin with a regexp to select it (as opposed
+          to 'default'),  only every other script/event would be trig-
+          gered  (forgot to clear a couple of hash  iterators).  This
+          has been fixed. 
+        • $mech->content now returns the content in the encoding of
+          the page itself, rather than the encoding of the first page
+          encountered.
+        The JavaScript plugin:
+        • The engine method (experimental and undocumented--read the
+          source) has been added.
+	• clear_timeouts now actually works properly. It used to run
+          the code for each timeout only if the specified  time  had
+          *not* elapsed.
+        • Line numbers for event attributes are now passed to the back
+          end’s event2sub method.
+        JE back end:
+        • Read-only properties are now marked as such in the JS  envi-
+          ronment  (which prevents the setting of a property if a pro-
+          totype has a read-only property of the same name --the only
+          difference it makes) and now have their types (string,  num-
+          ber, etc.) set properly.
+        • Class bindings now use JE’s ‘unwrap’ feature, so version
+          0.022 is now required.
+        • event2sub now supports line numbers.
+
 0.002   23 December, 2007
         The DOM plugin:
         • The DOM plugin’s interface has changed.  The  callback  rou-

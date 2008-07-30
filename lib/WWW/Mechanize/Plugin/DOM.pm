@@ -4,7 +4,7 @@ package WWW::Mechanize::Plugin::DOM;
 # languages may use DOM as well. Anyone have time to implement Acme::Chef
 # bindings for Mech? :-)
 
-$VERSION = '0.002';
+$VERSION = '0.003';
 
 use 5.006;
 
@@ -16,6 +16,8 @@ use HTML::DOM 0.010;
 use HTTP::Headers::Util 'split_header_words';
 use Scalar::Util 'weaken';
 
+# ~~~ I THINK THESE CLOSURES ARE BAD!!! The charset is probably carried
+#     forward from one page to the next.
 
 sub init { # expected to return a plugin object that the mech object will
            # use to communicate with the plugin.
@@ -34,8 +36,8 @@ sub init { # expected to return a plugin object that the mech object will
 	    sub {
 	        my $mech = shift;
 	        $mech->is_html or WWW::Mechanize::next_handler;
-	        my $stuff =
-	            $mech->plugin('DOM')->tree->documentElement->as_HTML;
+	        my $stuff = (my $self = $mech->plugin('DOM'))
+	            ->tree->documentElement->as_HTML;
 	        defined $$self{charset} ? encode $$self{charset}, $stuff :
 			$stuff;
 	    }
@@ -44,8 +46,8 @@ sub init { # expected to return a plugin object that the mech object will
 	    sub {
 	        my $mech = shift;
 	        $mech->is_html or WWW::Mechanize::next_handler;
-	        my $stuff =
-	            $mech->plugin('DOM')->tree->documentElement->as_text;
+	        my $stuff = (my $self = $mech->plugin('DOM'))
+	            ->tree->documentElement->as_text;
 	        defined $$self{charset} ? encode $$self{charset}, $stuff :
 			$stuff;
 	    }
@@ -143,21 +145,23 @@ sub _parse_html {
 			        $code = $elem->firstChild->data;
 			        ++$inline;
 			        $uri = $mech->uri;
-			        $line = 1 + (() =
-			            substr($src,0,$elem->content_offset)
-			                =~ /\cm\cj?|[\cj\x{2028}\x{2029}]/g
+			        $line = _line_no(
+					$src,$elem->content_offset
 			        );
 			    };
 	
 			    SCRIPT_HANDLER: {
+			    if(defined $lang) {
 			    while(my($lang_re,$handler) = each
 			          %{$$self{script_handlers}}) {
 			        next if $lang_re eq 'default';
 			        $lang =~ $lang_re and
 			            &$handler($mech, $tree, $code,
 					$uri, $line, $inline),
+			            # reset iterator:
+			            keys %{$$self{script_handlers}},
 			            last SCRIPT_HANDLER;
-			    } # end of while
+			    }} # end of if-while
 			    &{ $$self{script_handlers}{default} ||
 			        return }($mech,$tree, $code,
 					$uri, $line, $inline);
@@ -173,9 +177,14 @@ sub _parse_html {
 
 		if(%{$$self{event_attr_handlers}}) {
 			$tree->event_attr_handler(sub {
-				my($elem, $event, $code) = @_;
+				my($elem, $event, $code, $offset) = @_;
 				my $lang = $elem->attr('language');
 				defined $lang or $lang = $script_type;
+
+			        my $uri = $mech->uri;
+			        my $line = defined $offset ? _line_no(
+					$src, $offset
+			        ) : undef;
 
 				HANDLER: {
 				if(defined $lang) {
@@ -183,12 +192,17 @@ sub _parse_html {
 				    %{$$self{event_attr_handlers}}) {
 					next if $lang_re eq 'default';
 					$lang =~ $lang_re and
-					    &$handler($mech, $elem,
-				                $event,$code),
-					    last HANDLER;
+					  &$handler($mech, $elem,
+				              $event,$code,$uri,$line),
+					  # reset the hash iterator:
+					  keys
+					    %{$$self{event_attr_handlers}},
+					  last HANDLER;
 				}} # end of if-while
 				&{ $$self{event_attr_handlers}{default} ||
-				    return }($mech,$elem, $event,$code);
+				    return }(
+					$mech,$elem,$event,$code,$uri,$line
+				);
 				} # end of HANDLER
 			});
 		}
@@ -213,6 +227,14 @@ sub _parse_html {
 	$tree->close;
 
 	return 1;
+}
+
+sub _line_no {
+	my ($src,$offset) = @_;
+	return 1 + (() =
+		substr($src,0,$offset)
+		    =~ /\cm\cj?|[\cj\x{2028}\x{2029}]/g
+	);
 }
 
 sub options {
@@ -251,7 +273,7 @@ WWW::Mechanize::Plugin::DOM - HTML Document Object Model plugin for Mech
 
 =head1 VERSION
 
-0.002 (alpha)
+0.003 (alpha)
 
 =head1 SYNOPSIS
 
@@ -276,7 +298,7 @@ WWW::Mechanize::Plugin::DOM - HTML Document Object Model plugin for Mech
   }
 
   sub event_attr_handler {
-          my($mech, $elem, $event_name, $code) = @_;
+          my($mech, $elem, $event_name, $code, $url, $line) = @_;
           # ... code that returns a coderef ...
   }
 
@@ -329,13 +351,17 @@ C<script_handlers>, the script element has no
 'type' or 'language' attribute.
 
 Each time you move to another page with WWW::Mechanize, a different copy
-of the DOM plugin object is created. So, if you must refer to in a callback
+of the DOM plugin object is created. So, if you must refer to it in a 
+callback
 routine, don't use a closure, but get it from the C<$mech> object that is
 passed as the first argument.
 
+The line number passed to an event attribute handler requires L<HTML::DOM>
+0.012 or higher. It will be C<undef> will lower versions.
+
 =head1 PREREQUISITES
 
-L<HTML::DOM> 0.010 or later
+L<HTML::DOM> 0.010 or later (0.012 or higher recommended)
 
 L<WWW::Mechanize>
 
@@ -349,19 +375,19 @@ L<WWW::Mechanize::Plugin::JavaScript> for more info.
 
 =item *
 
-Handlers passed to C<event_attr_handlers> are currently not given any URL
-or line number information.
-
-=item *
-
 Event handlers like onload and onunload are not yet supported. Some events
 do not yet do everything they are supposed to; e.g., a link's C<click>
-method does not go to the next page. (This is actually a DOM plugin bug.)
+method does not go to the next page.
 
 =item *
 
 This plugin does not yet provide WWW::Mechanize with all the necessary
 callback routines (for C<extract_images>, etc.).
+
+=item *
+
+Currently, external scripts referenced within a page are always read as
+Latin-1. This will be fixed.
 
 =back
 
