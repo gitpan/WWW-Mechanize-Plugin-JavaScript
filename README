@@ -1,4 +1,4 @@
-WWW::Mechanize::Plugin::JavaScript and ::DOM, version 0.003 (alpha)
+WWW::Mechanize::Plugin::JavaScript and ::DOM, version 0.004 (alpha)
 
 Plugins for WWW::Mechanize that provide HTML DOM and Java-
 Script support.
@@ -10,10 +10,8 @@ hard to say. Try it and see. (And patches are always welcome.)
 
 CHANGES IN THIS RELEASE
 
-Line numbers are now supported for event handlers created by HTML
-attributes (requires HTML::DOM 0.012).
-
-Some bugs have been fixed. See the Changes file for the complete list.
+The location object now stringifies to its href property instead of
+[object Location].
 
 
 INSTALLATION
@@ -44,7 +42,7 @@ This module requires:
 - HTML::DOM 0.010 or higher (0.012 or higher recommended)
 
 - The experimental version of WWW::Mechanize available at
-  http://www-mechanize.googlecode.com/svn/branches/plugins/
+  http://www-mechanize.googlecode.com/svn/wm/branches/plugins/
 
 - CSS::DOM
 

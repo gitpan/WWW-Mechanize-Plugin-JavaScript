@@ -23,6 +23,7 @@ use ExtUtils::MakeMaker;
 %js_prq = (
 	CSS::DOM::Interface  => 0,
 	HTML::DOM::Interface => 0,
+	overload             => 0,
 	Scalar::Util         => 0,
 	strict               => 0,
 	Time::HiRes          => 0,

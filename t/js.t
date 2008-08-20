@@ -101,3 +101,10 @@ use tests 2; # multiple JS environments
 	$m->back;
 }
 
+use tests 1; # location stringification
+{
+	$js->eval(
+		'is(location, location.href, "location stringification")'
+	);
+}
+

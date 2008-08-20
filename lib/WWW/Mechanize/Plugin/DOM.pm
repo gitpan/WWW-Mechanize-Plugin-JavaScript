@@ -4,7 +4,7 @@ package WWW::Mechanize::Plugin::DOM;
 # languages may use DOM as well. Anyone have time to implement Acme::Chef
 # bindings for Mech? :-)
 
-$VERSION = '0.003';
+$VERSION = '0.004';
 
 use 5.006;
 
@@ -15,9 +15,8 @@ use Encode qw'encode decode';
 use HTML::DOM 0.010;
 use HTTP::Headers::Util 'split_header_words';
 use Scalar::Util 'weaken';
+no WWW::Mechanize ();
 
-# ~~~ I THINK THESE CLOSURES ARE BAD!!! The charset is probably carried
-#     forward from one page to the next.
 
 sub init { # expected to return a plugin object that the mech object will
            # use to communicate with the plugin.
@@ -226,6 +225,18 @@ sub _parse_html {
 	$tree->write(defined $cs ? decode $cs, $src : $src);
 	$tree->close;
 
+	$tree->body->trigger_event('load');
+	# ~~~ Problem: Ever since JavaScript 1.0000000, the
+	#     (un)load events on the body attribute have associated event
+	#     handlers with the Window object. But the DOM 2 Events spec
+	#     doesn’t provide for events on the window (view) at all; only
+	#     on Nodes. The load event is supposed to be triggered on the
+	#     document. In HTML 5 (10 June 2008 draft), what we are doing
+	#     here is correct. In
+	#     Safari & FF 3, the body element’s attributes create event
+	#     handlers on the window, which are called with the document as
+	#     the event’s target.
+
 	return 1;
 }
 
@@ -273,7 +284,7 @@ WWW::Mechanize::Plugin::DOM - HTML Document Object Model plugin for Mech
 
 =head1 VERSION
 
-0.003 (alpha)
+0.004 (alpha)
 
 =head1 SYNOPSIS
 
@@ -359,6 +370,11 @@ passed as the first argument.
 The line number passed to an event attribute handler requires L<HTML::DOM>
 0.012 or higher. It will be C<undef> will lower versions.
 
+=head1 THE 'LOAD' EVENT
+
+Currently the (on)load event is triggered when the page finishes parsing.
+This plugin assumes that you're not going to be loading any images, etc.
+
 =head1 PREREQUISITES
 
 L<HTML::DOM> 0.010 or later (0.012 or higher recommended)
@@ -375,7 +391,9 @@ L<WWW::Mechanize::Plugin::JavaScript> for more info.
 
 =item *
 
-Event handlers like onload and onunload are not yet supported. Some events
+The onunload event is not yet supported. The window object cannot yet be
+used as an EventTarget (actually, it's not currently part of the DOM
+plugin, but part of the JS plugin; this will change, though). Some events
 do not yet do everything they are supposed to; e.g., a link's C<click>
 method does not go to the next page.
 

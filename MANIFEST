@@ -7,6 +7,8 @@ t/dom-callbacks.html
 t/dom-charset.html
 t/dom-charset2.html
 t/dom-no-lang.html
+t/dom-onload.html
+t/dom-require.t
 t/dom-test-script
 t/dom.t
 t/je.t

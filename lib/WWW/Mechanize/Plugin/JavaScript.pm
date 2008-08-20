@@ -6,7 +6,7 @@ use warnings; # :-(
 use Scalar::Util qw'weaken';
 use Time::HiRes 'time';
 
-our $VERSION = '0.003';
+our $VERSION = '0.004';
 
 # Attribute constants (array indices)
 sub mech() { 0 }
@@ -234,11 +234,13 @@ use URI;
 use HTML::DOM::Interface qw'STR METHOD VOID';
 use Scalar::Util 'weaken';
 
-our $VERSION = '0.002';
+our $VERSION = '0.004';
 
 sub uri(){0};
 sub mech(){1};
 {no strict;undef *$_ for qw/uri mech STR METHOD VOID/;}
+
+use overload fallback => 1, '""' => sub{shift->[uri]};
 
 our %Interface = (
 	__PACKAGE__, 'Location',
@@ -379,7 +381,7 @@ WWW::Mechanize::Plugin::JavaScript - JavaScript plugin for WWW::Mechanize
 
 =head1 VERSION
 
-Version 0.003
+Version 0.004
 
 B<WARNING:> This is an alpha release. The API is subject to change 
 without
@@ -397,7 +399,7 @@ hard to say. Try it and see. (And patches are always welcome.)
   $m->use_plugin('JavaScript');
   $m->get('http://www.cpan.org/');
   $m->get('javascript:alert("Hello!")'); # prints Hello!
-  
+                                         # (not yet implemented)
   $m->use_plugin(JavaScript =>
           engine  => 'SpiderMonkey',
           alert   => \&alert, # custom alert function
@@ -615,13 +617,18 @@ JE 0.022 or later (when there is a SpiderMonkey binding available it will
 become optional)
 
 The experimental version of WWW::Mechanize available at
-L<http://www-mechanize.googlecode.com/svn/branches/plugins/>
+L<http://www-mechanize.googlecode.com/svn/wm/branches/plugins/>
 
 CSS::DOM
 
 =head1 BUGS
 
 (See also L<WWW::Mechanize::Plugin::DOM/Bugs>.)
+
+Currently, you'll get rather obtuse errors if you call the C<eval> method
+when the current page is not HTML.
+
+'javascript:' URLs are not yet supported.
 
 To report bugs, please e-mail the author.
 

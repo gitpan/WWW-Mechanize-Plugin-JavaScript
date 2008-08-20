@@ -1,5 +1,5 @@
+Hmmm, this list seems to be getting longer, rather than shorter.
 
-trigger event handlers
 finish adding mech callback routines
 write tests
 finish adding browser-only js features (i.e., non-DOM stuff like navigator, window properties/methods and whatever else)
@@ -7,6 +7,23 @@ frames
 windows
 figure out a way to make AbstractViews work (window == window.document.defaultView)
 revisit the event handler scope chain; make sure it has everything it's supposed to; document it
+add support for HTML::DOM’s utf-16 methods.
+javascript: URIs
+have a look at the HTML 5 spec which is supposed to have something about the Window object
+window.onload etc.
 whatever else I've forgotten
 
-fix the encoding bug (a form submitted is not in the same encoding as the page) (also have a look at HTML::Encoding and see whether it could be helpful)
+
+----------------------------
+
+Miscellaneous problems:
+
+The JE back end’s bind_class method chokes if there is a superclass without
+a corresponding Perl class:
+
+  CSS::DOM::Rule => CSSUnknownRule,
+  CSSUnknownRule => { _isa => 'CSSRule' },
+  CSSRule        => { ... },
+
+The solution in this case was to fix CSS::DOM before releasing 0.03, but
+this could potential bite anyone trying to bind his own classes.

@@ -117,3 +117,20 @@ use tests 2; # get_text_content with different charsets
 		 'get_text_content on subsequent page';
 }
 
+use tests 2; # on(un)load
+{
+	my $events = '';
+	(my $m = new WWW::Mechanize)->use_plugin('DOM' =>
+		event_attr_handlers => {
+			default => sub {
+				my $code = $_[3];
+				sub { $events .= $code }
+			}
+		},
+	);
+	$m->get(URI::file->new_abs( 't/dom-onload.html' ));
+	is $events, 'onlode', '<body onload=...';
+	$m->get(new_abs URI'file 't/blank.html');
+	SKIP:{skip"unimplemented",1;is $events, 'onlodeonunlode'}
+}
+

@@ -1,6 +1,15 @@
 Revision history for WWW::Mechanize::Plugin::JavaScript and ::DOM
 
-0.003   ??
+0.004   19 August, 2008
+	The DOM plugin:
+        • <body onload=...> now works.
+        • The DOM plugin can now be C<require>d without Mech already
+          loaded, so it works with tools like pmvers.
+        The JavaScript plugin:
+        • The location object now stringifies to its href property
+          instead of [object Location].
+
+0.003   29 July, 2008
 	The DOM plugin:
         • Event attribute handlers now receive URL and line
           number info.
