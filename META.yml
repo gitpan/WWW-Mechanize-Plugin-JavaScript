@@ -1,25 +1,27 @@
 # http://module-build.sourceforge.net/META-spec.html
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         WWW-Mechanize-Plugin-JavaScript
-version:      0.004
+version:      0.005
 version_from: lib/WWW/Mechanize/Plugin/JavaScript.pm
 installdirs:  site
 requires:
     Carp:                          0
     CSS::DOM::Interface:           0
     Encode:                        0
+    Hash::Util::FieldHash::Compat: 0
     HTML::DOM:                     0.01
-    HTML::DOM::Interface:          0
+    HTML::DOM::Interface:          0.019
+    HTML::DOM::View:               0.018
     HTTP::Headers::Util:           0
     JE:                            0.022
     lib:                           0
     LWP::Simple:                   0
-    overload:                      0
     Scalar::Util:                  0
     strict:                        0
     Test::More:                    0
     Time::HiRes:                   0
     URI:                           0
+    URI::Escape:                   0
     URI::file:                     0
     warnings:                      0
 

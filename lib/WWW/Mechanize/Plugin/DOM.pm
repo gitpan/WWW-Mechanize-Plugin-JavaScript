@@ -4,7 +4,7 @@ package WWW::Mechanize::Plugin::DOM;
 # languages may use DOM as well. Anyone have time to implement Acme::Chef
 # bindings for Mech? :-)
 
-$VERSION = '0.004';
+$VERSION = '0.005';
 
 use 5.006;
 
@@ -12,11 +12,14 @@ use strict;
 use warnings;
 
 use Encode qw'encode decode';
+use Hash::Util::FieldHash::Compat 'fieldhash';
 use HTML::DOM 0.010;
 use HTTP::Headers::Util 'split_header_words';
 use Scalar::Util 'weaken';
 no WWW::Mechanize ();
+no WWW::Mechanize::Plugin::DOM::Window ();
 
+fieldhash my %parathia; # keyed by mech
 
 sub init { # expected to return a plugin object that the mech object will
            # use to communicate with the plugin.
@@ -26,6 +29,7 @@ sub init { # expected to return a plugin object that the mech object will
 	my $self = bless {
 		script_handlers => {},
 		event_attr_handlers => {},
+		s => 1, # scriptable
 	}, $package;
 
 	$mech->add_handler(
@@ -67,6 +71,7 @@ sub _parse_html {
 	my ($mech,$src) = @_;
 	weaken $mech;
 	my $self = $mech->plugin('DOM');
+	weaken $self;
 
 	$$self{tree} = my $tree = new HTML::DOM
 			response => $mech->response,
@@ -113,6 +118,7 @@ sub _parse_html {
 
 		if(%{$$self{script_handlers}}) {
 			$tree->elem_handler(script => sub {
+			    return unless $self->{s};
 			    my($tree, $elem) = @_;
 
 			    my $lang = $elem->attr('type');
@@ -168,6 +174,7 @@ sub _parse_html {
 			});
 
 			$tree->elem_handler(noscript => sub {
+				return unless $self->{s};
 				$_[1]->detach#->delete;
 				# ~~~ delete currently stops it from work-
 				#     ing; I need to looook into this.
@@ -209,12 +216,17 @@ sub _parse_html {
 	# ~~~ Should we use the content of <noscript> elems if no script
 	#     handler is provided but an event attribute handler *is*
 	#     provided? (Now who would be crazy enough to do that?)
-	if(!%{$$self{script_handlers}}) {
-		$tree->elem_handler(noscript => sub {
-			$_[1]->replace_with_content->delete;
-			# ~~~ why does this need delete?
-		});
-	}
+	$tree->elem_handler(noscript => sub {
+		return if $self->{s} && %{$$self{script_handlers}};
+		$_[1]->replace_with_content->delete;
+		# ~~~ why does this need delete?
+	});
+
+	$tree->defaultView(
+		my $view = $parathia{$mech} ||=
+			new WWW'Mechanize'Plugin'DOM'Window $mech
+	);
+	$view->document($tree);
 
 	# Find out the encoding:
 	$$self{charset} = my $cs = {
@@ -271,10 +283,25 @@ sub options {
 	}
 }
 
-sub tree { $_[0]{tree} }
+sub clone {
+	my $self = shift;
+	bless { map +($_=>$$self{$_}), qw[
+		script_handlers event_attr_handlers s
+	]}, ref $self
+}
 
-sub DESTROY {
-	($_[0]{tree}||return)->delete;
+sub tree { $_[0]{tree} }
+sub window { $_[0]{tree}->defaultView }
+
+sub scripts_enabled {
+	my $old = (my $self = shift)->{s};
+	$self->{s} = shift if @_;
+	$old
+}
+
+sub check_timers {
+	# ~~~ temporary hack
+	shift->window->_check_timeouts;
 }
 
 
@@ -284,7 +311,7 @@ WWW::Mechanize::Plugin::DOM - HTML Document Object Model plugin for Mech
 
 =head1 VERSION
 
-0.004 (alpha)
+0.005 (alpha)
 
 =head1 SYNOPSIS
 
@@ -314,6 +341,7 @@ WWW::Mechanize::Plugin::DOM - HTML Document Object Model plugin for Mech
   }
 
   $m->plugin('DOM')->tree; # DOM tree for the current page
+  $m->plugin('DOM')->window; # Window object
 
 =head1 DESCRIPTION
 
@@ -370,14 +398,52 @@ passed as the first argument.
 The line number passed to an event attribute handler requires L<HTML::DOM>
 0.012 or higher. It will be C<undef> will lower versions.
 
+=head1 METHODS
+
+This is the usual boring list of methods. Those that are described above
+are listed here without descriptions.
+
+=item window
+
+This returns the window object.
+
+=item tree
+
+This returns the DOM tree (aka the document object).
+
+=item check_timers
+
+This evaluates the code associated with each timeout registered with 
+the window's C<setTimeout> function,
+if the appropriate interval has elapsed.
+
+=item scripts_enabled ( $new_val )
+
+This returns a boolean indicating whether scripts are enabled. It is true
+by default. You can disable scripts by passing a false value.
+
+B<Bug:> This does not
+disable event handlers that are already registered.
+
 =head1 THE 'LOAD' EVENT
 
 Currently the (on)load event is triggered when the page finishes parsing.
 This plugin assumes that you're not going to be loading any images, etc.
 
+=head1 THE C<%Interface> HASH
+
+If you are creating your own script binding, you'll probably want to access
+the hash named C<%WWW::Mechanize::Plugin::DOM::Interface>, which lists, in
+a machine-readable format, the interface members of the location and
+navigator objects. It follows the same format as
+L<%HTML::DOM::Interface|HTML::DOM::Interface>.
+
+See also L<WWW::Mechanize::Plugin::DOM::Window/THE C<%Interface> HASH> for
+a list of members of the window object.
+
 =head1 PREREQUISITES
 
-L<HTML::DOM> 0.010 or later (0.012 or higher recommended)
+L<HTML::DOM> 0.019 or later
 
 L<WWW::Mechanize>
 
@@ -385,15 +451,18 @@ The current stable release of L<WWW::Mechanize> does not support plugins.
 See
 L<WWW::Mechanize::Plugin::JavaScript> for more info.
 
+L<constant::lexical>
+
+L<Hash::Util::FieldHash::Compat>
+
 =head1 BUGS
 
 =over 4
 
 =item *
 
-The onunload event is not yet supported. The window object cannot yet be
-used as an EventTarget (actually, it's not currently part of the DOM
-plugin, but part of the JS plugin; this will change, though). Some events
+The onunload event is not yet supported. The window object is not yet part
+of the event dispatch chain. Some events
 do not yet do everything they are supposed to; e.g., a link's C<click>
 method does not go to the next page.
 
@@ -407,9 +476,36 @@ callback routines (for C<extract_images>, etc.).
 Currently, external scripts referenced within a page are always read as
 Latin-1. This will be fixed.
 
+=item *
+
+The location object's C<replace> method does not currently work correctly
+if the current page is the first page. In that case it acts like an
+assignment to C<href>.
+
+=item *
+
+Disabling scripts does not currently affect event handlers that are already
+registered.
+
+=item *
+
+The C<window> method dies if the page is not HTML.
+
 =back
 
+=head1 AUTHOR & COPYRIGHT
+
+Copyright (C) 2007 Father Chrysostomos
+<C<< join '@', sprout => join '.', reverse org => 'cpan' >>E<gt>
+
+This program is free software; you may redistribute it and/or modify
+it under the same terms as perl.
+
 =head1 SEE ALSO
+
+L<WWW::Mechanize::Plugin::DOM::Window>
+
+L<WWW::Mechanize::Plugin::DOM::Location>
 
 L<WWW::Mechanize::Plugin::JavaScript>
 

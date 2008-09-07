@@ -3,10 +3,12 @@ package WWW::Mechanize::Plugin::JavaScript;
 use strict;   # :-(
 use warnings; # :-(
 
+use Encode 'decode_utf8';
 use Scalar::Util qw'weaken';
-use Time::HiRes 'time';
+use URI::Escape 'uri_unescape';
+no WWW::Mechanize ();
 
-our $VERSION = '0.004';
+our $VERSION = '0.005';
 
 # Attribute constants (array indices)
 sub mech() { 0 }
@@ -78,6 +80,16 @@ sub init { # expected to return a plugin object that the mech object will
 		},
 	);
 
+	$mech->add_handler(modify_request => sub {
+		(my $url = $_[1]->uri)->scheme eq 'javascript'
+			or return;
+		shift->plugin('JavaScript')->eval(
+			decode_utf8 uri_unescape opaque $url
+		);
+		$@ and $mech->warn($@);
+		WWW'Mechanize'abort;
+	});
+
 	weaken $mech; # stop closures from preventing destruction
 
 	$self;
@@ -139,56 +151,29 @@ sub _start_engine {
 	}
 
 	$self->[jsbe] = "WWW::Mechanize::Plugin::JavaScript::$$self[benm]"
-		-> new;
+		-> new( my $w = $self->[mech]->plugin('DOM')->window );
 	require HTML::DOM::Interface;
 	require CSS::DOM::Interface;
 	for ($$self[jsbe]) {
 		$_->bind_classes(\%HTML::DOM::Interface);
 		$_->bind_classes(\%CSS::DOM::Interface);
 		$_->bind_classes(
-		  \%WWW::Mechanize::Plugin::JavaScript::Location::Interface
+		  \%WWW::Mechanize::Plugin::DOM::Interface
 		);
 		for my $__(@{$self->[cb]||[]}){
 			$_->bind_classes($__)
 		}
 		$_->set(document => $self->[mech]->plugin('DOM')->tree);
-		$_->new_function(alert =>  # ~~~ reasonable default ?
-			$$self[alert] || sub { print @_, "\n" });
-		# ~~~ should we provide defaults for these two?
-		{ $_->new_function(confirm => $$self[confirm] || next) }
-		{ $_->new_function(prompt  => $$self[prompt ] || next) }
+		{ $w->set_alert_function  ($$self[alert]   || next) }
+		{ $w->set_confirm_function($$self[confirm] || next) }
+		{ $w->set_prompt_function ($$self[prompt ] || next) }
 
-		# ~~~ need to finish the default window properties
-		$_->set(document => location => my $l = 
-			(__PACKAGE__.'::Location')->new(
-				$$self[mech]->uri,
-				$$self[mech]
-			)
-		);
-		$_->set(location => $l);
-		$_->define_setter(document => location => my $s = sub{
-			$l->href(shift);
-		});
-		$_->define_setter(location => $s);
-		$_->set(navigator => userAgent => $$self[mech]->agent);
-		$_->set(navigator => appName => 'WWW::Mechanize');
-		$_->new_function(setTimeout => sub {
-			my $time = time;
-			my ($code, $ms) = @_;
-			$ms /= 1000;
-			$self->[tmout][my $id = @{$self->[tmout]}] =
-				[$ms+$time, $code];
-			return $id;
-		}, 'Number');
-		$_->new_function(clearTimeout => sub {
-			delete $self->[tmout][shift];
-			return;
-		});
 		$_->set('screen', {});
-		$_->new_function(open => sub {
-			$self->[mech]->get(shift);
-			# ~~~ Just a placeholder for now.
-		});
+			# ~~~ This doesn’t belong here. I need to get a
+			#     wround to addy nit two the win dough object
+			#     one sigh figger out zackly how it shoe be
+			#     done.
+
 	} # for $$self->[jsbe];
 	{ ($self->[init_cb]||next)->($self); }
 	weaken $self; # closures
@@ -207,16 +192,7 @@ for(qw/set eval new_function/) {
 }
 
 sub check_timeouts {
-	my $time = time;
-	my $self = shift;
-	local *_;
-	for my $id(0..$#{$self->[tmout]}) {
-		next unless $_ = $self->[tmout][$id];
-		$$_[0] <= $time and
-			$self->[jsbe]->eval($$_[1]),
-			delete $self->[tmout][$id];
-	}
-	return
+	shift->[mech]->plugin("DOM")->check_timers;
 }
 
 # ~~~ This is experimental. The purposed for this is that code that relies
@@ -226,148 +202,6 @@ sub check_timeouts {
 #     been loaded. If we have it start the JS engine, we may load it and
 #     then not use it.
 sub engine { shift->[benm] }
-
-
-package WWW::Mechanize::Plugin::JavaScript::Location;
-
-use URI;
-use HTML::DOM::Interface qw'STR METHOD VOID';
-use Scalar::Util 'weaken';
-
-our $VERSION = '0.004';
-
-sub uri(){0};
-sub mech(){1};
-{no strict;undef *$_ for qw/uri mech STR METHOD VOID/;}
-
-use overload fallback => 1, '""' => sub{shift->[uri]};
-
-our %Interface = (
-	__PACKAGE__, 'Location',
-	Location => {
-		hash => STR,
-		host => STR,
-		hostname => STR,
-		href => STR,
-		pathname => STR,
-		port => STR,
-		protocol => STR,
-		search => STR,
-		reload => VOID|METHOD,
-		replace => VOID|METHOD,
-	}
-);
-
-sub new { # usage: new .....::Location $uri, $mech
-	my $class = shift;
-	my $self = bless [@_], $class;
-	$self->[uri] = new URI $self->[uri];
-	weaken $self->[mech];
-	$self;
-}
-
-sub hash {
-	my $loc = shift;
-	my $old = $loc->[uri]->fragment;
-	$old = "#$old" unless !length $loc->[uri] and $loc->[uri] !~ /#\z/;
-	if (@_){
-		shift() =~ /#?(.*)/s;
-		(my $uri = $loc->[uri]->clone)->fragment($1);
-		$uri->eq($loc->[uri]) or $loc->[mech]->get($uri);
-	}
-	$old
-}
-
-sub host {
-	my $loc = shift;
-	if (@_) {
-		(my $uri = $loc->[uri]->clone)->host(shift);
-		$loc->[mech]->get($uri);
-	}
-	else {
-		$loc->[uri]->host;
-	}
-}
-
-sub hostname {
-	my $loc = shift;
-	if (@_) {
-		(my $uri = $loc->[uri]->clone)->host_port(shift);
-		$loc->[mech]->get($uri);
-	}
-	else {
-		$loc->[uri]->host_port;
-	}
-}
-
-sub href {
-	my $loc = shift;
-	if (@_) {
-		$loc->[mech]->get(shift);
-	}
-	else {
-		$loc->[uri]->as_string;
-	}
-}
-
-sub pathname {
-	my $loc = shift;
-	if (@_) {
-		(my $uri = $loc->[uri]->clone)->path(shift);
-		$loc->[mech]->get($uri);
-	}
-	else {
-		$loc->[uri]->path;
-	}
-}
-
-sub port {
-	my $loc = shift;
-	if (@_) {
-		(my $uri = $loc->[uri]->clone)->port(shift);
-		$loc->[mech]->get($uri);
-	}
-	else {
-		$loc->[uri]->port;
-	}
-}
-
-sub protocol {
-	my $loc = shift;
-	if (@_) {
-		shift() =~ /(.*):?/s;
-		(my $uri = $loc->[uri]->clone)->scheme($1);
-		$loc->[mech]->get($uri);
-	}
-	else {
-		$loc->[uri]->scheme . ':';
-	}
-}
-
-sub search {
-	my $loc = shift;
-	if (@_){
-		shift() =~ /(\??)(.*)/s;
-		(my $uri = $loc->[uri]->clone)->query(
-			$1&&length$2 ? $2 : undef
-		);
-		$uri->eq($loc->[uri]) or $loc->[mech]->get($uri);
-	} else {
-		my $q = $loc->[uri]->query;
-		defined $q ? "?$q" : "";
-	}
-}
-
-
-# ~~~ Safari doesn't support forceGet. Do I need to?
-sub reload  { # args (forceGet) 
-	shift->[mech]->reload
-}
-sub replace { # args (URL)
-	my $mech = shift->[mech];
-	$mech->back();
-	$mech->get(shift);
-}
 
 
 # ------------------ DOCS --------------------#
@@ -381,7 +215,7 @@ WWW::Mechanize::Plugin::JavaScript - JavaScript plugin for WWW::Mechanize
 
 =head1 VERSION
 
-Version 0.004
+Version 0.005
 
 B<WARNING:> This is an alpha release. The API is subject to change 
 without
@@ -508,6 +342,9 @@ This will evaluate the code associated with each timeout registered with
 the JS C<setTimeout> function,
 if the appropriate interval has elapsed.
 
+B<Warning:> This is deprecated and will be deleted in a future release. Use
+the DOM plugins's C<check_timers> method instead.
+
 =back
 
 =head1 JAVASCRIPT FEATURES
@@ -516,34 +353,13 @@ The members of the HTML DOM that are available depend on the versions of
 L<HTML::DOM> and L<CSS::DOM> installed. See L<HTML::DOM::Interface> and
 L<CSS::DOM::Interface>.
 
-The objects and properties specific to browsers that are supported so far
-are:
+For a list of the properties of the window object, see 
+L<WWW::Mechanize::Plugin::DOM::Window>.
 
-  location
-      .hash
-      .host
-      .hostname
-      .href
-      .pathname
-      .port
-      .protocol
-      .search
-      .reload()
-      .replace()
-  document
-      .location (alias to the global var)
-  alert()
-  navigator
-      .userAgent (same as $mech->agent)
-      .appName (WWW::Mechanize)
-  setTimeout()
-  clearTimeout()
-  screen (just an empty object)
-  open()
-
-C<open> is a temporary placeholder. Right now it ignores all its args
-except the first, and goes to the given URL, such that C<open(foo)> is 
-equivalent to C<location = foo>.
+The JavaScript plugin itself provides just the C<screen> object, which is
+empty. Later this may be moved to the DOM plugin's window object, but that
+should make little difference to you, unless you are writing bindings for
+another scripting language.
 
 =head1 BACK ENDS
 
@@ -559,10 +375,31 @@ The following methods must be implemented:
 
 =item new
 
-This method
-simply has to create a JavaScript environment, with C<window> and C<self>
+This method is passed a window (L<WWW::Mechanize::Plugin::DOM::Window>)
+object.
+
+It has to create a JavaScript environment, in which the global object
+delegates to the window object for the members listed in 
+L<C<%WWW::Mechanize::Plugin::DOM::Window::Interface>|WWW::Mechanize::Plugin::DOM::Window/THE C<%Interface> HASH>
+(that's quite a
+mouthful, isn't it). When the window object is passed to the JavaScript environment, the global
+object must be returned instead.
+
+This method can optionally create C<window> and 
+C<self>
 properties
-that refer to the global object, and return an object.
+that refer to the global object, but this is not necessary. It might make
+things a little more efficient.
+
+Finally, it has to return an object that implements the interface below.
+
+The back end has to do some magic to make sure that, when the global object
+is passed to another JS environment, references to it automatically point
+to a new global object when the user (or calling code) browses to another
+page.
+
+For instance, it could wrap up the global object in a proxy object
+that delegates to whichever global object corresponds to the document.
 
 =back
 
@@ -606,6 +443,9 @@ with a list of property names representing the 'path' to the property. The
 last argument will be a coderef that must be called with the value assigned
 to the property.
 
+B<Note:> This is actually not used right now. The requirement for this may
+be removed some time before version 1.
+
 =head1 PREREQUISITES
 
 perl 5.8.3 or later (actually, this module doesn't use any features that
@@ -623,18 +463,17 @@ CSS::DOM
 
 =head1 BUGS
 
-(See also L<WWW::Mechanize::Plugin::DOM/Bugs>.)
+(See also L<WWW::Mechanize::Plugin::DOM/Bugs> and 
+L<WWW::Mechanize::Plugin::JavaScript::JE/Bugs>.)
 
 Currently, you'll get rather obtuse errors if you call the C<eval> method
 when the current page is not HTML.
-
-'javascript:' URLs are not yet supported.
 
 To report bugs, please e-mail the author.
 
 =head1 AUTHOR & COPYRIGHT
 
-Copyright (C) 2007 Father Chrysostomos
+Copyright (C) 2007-8 Father Chrysostomos
 <C<< join '@', sprout => join '.', reverse org => 'cpan' >>E<gt>
 
 This program is free software; you may redistribute it and/or modify
@@ -659,6 +498,10 @@ L<HTML::DOM>
 =item -
 
 L<JE>
+
+=item -
+
+L<JavaScript.pm|JavaScript>
 
 =item -
 

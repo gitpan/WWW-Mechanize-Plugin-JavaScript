@@ -1,7 +1,29 @@
 Revision history for WWW::Mechanize::Plugin::JavaScript and ::DOM
 
+0.005   ?? September, 2008
+        The DOM plugin:
+        • New scripts_enabled method for enabling/disabling scripts.
+        • The window object has been disentangled from the JavaScript
+          plugin and made its own Perl class, under the DOM namespace.
+          It is accessible via the ‘window’ method.
+          • This allows the window  object  to  inherit
+            from HTML::DOM::EventTarget, which provides
+            addEventListener, onclick, etc.
+          • As a bonus, it has a ‘self’ method.
+        • The JS plugin’s check_timeouts method is now deprecated. Use
+          the DOM plugin’s new check_timers method instead.
+        The JavaScript plugin:
+        • Support for javascript: URLs
+        • The JavaScript back end’s constructor is now called with the
+          window object as its argument.  It has to  make  the  global
+          object delegate to the window.
+        JE back end (0.004):
+        • Modified to conform to the previous item. It does not yet
+          support wrapping global objects when they are  passed  to
+          other JS environments.
+
 0.004   19 August, 2008
-	The DOM plugin:
+        The DOM plugin:
         • <body onload=...> now works.
         • The DOM plugin can now be C<require>d without Mech already
           loaded, so it works with tools like pmvers.
@@ -10,14 +32,14 @@ Revision history for WWW::Mechanize::Plugin::JavaScript and ::DOM
           instead of [object Location].
 
 0.003   29 July, 2008
-	The DOM plugin:
+        The DOM plugin:
         • Event attribute handlers now receive URL and line
           number info.
-	• On a page that has no Content-Script-Type header, a
+        • On a page that has no Content-Script-Type header, a
           script element with no language specified no longer
           causes warnings.
         • It used to be that,  if multiple script elements  or  event
-          attributes that used the same handler, and that handler was
+          attributes used the same  handler,  and  that  handler  was
           passed to the plugin with a regexp to select it (as opposed
           to 'default'),  only every other script/event would be trig-
           gered  (forgot to clear a couple of hash  iterators).  This
@@ -28,7 +50,7 @@ Revision history for WWW::Mechanize::Plugin::JavaScript and ::DOM
         The JavaScript plugin:
         • The engine method (experimental and undocumented--read the
           source) has been added.
-	• clear_timeouts now actually works properly. It used to run
+        • clear_timeouts now actually works properly. It used to run
           the code for each timeout only if the specified  time  had
           *not* elapsed.
         • Line numbers for event attributes are now passed to the back

@@ -9,8 +9,16 @@ use Test::More;
 
 use utf8;
 
+use URI::data;
 use URI::file;
 use WWW::Mechanize;
+
+sub data_url {
+	my $u = new URI 'data:';
+	$u->media_type('text/html');
+	$u->data(shift);
+	$u
+}
 
 use tests 4; # interface for callback routines
 for my $lang ('default', qr//) {
@@ -56,14 +64,14 @@ for my $lang ('default', qr//) {
 			'click',
 			'bar',
 			"$uri",
-			HTML::DOM->VERSION < 0.012 ? undef : 8,
+			 8,
 		event =>
 			'WWW::Mechanize',
 			'HTML::DOM::Element::A',
 			'click',
 			'baz',
 			"$uri",
-			HTML::DOM->VERSION < 0.012 ? undef : 9,
+			 9,
 	], "callbacks ($test_name)";
 	$m->plugin('DOM')->tree->getElementsByTagName('a')->[0]->
 		trigger_event('click');
@@ -134,3 +142,36 @@ use tests 2; # on(un)load
 	SKIP:{skip"unimplemented",1;is $events, 'onlodeonunlode'}
 }
 
+use tests 1; # window
+{
+	my $p = (my $m = new WWW::Mechanize)->use_plugin('DOM');
+	$m->get(URI::file->new_abs( 't/blank.html' ));
+	isa_ok $p->window, 'WWW::Mechanize::Plugin::DOM::Window';
+}
+
+use tests 4; # scripts_enabled
+{
+	my $script_src;
+
+	my $p = (my $m = new WWW::Mechanize)->use_plugin('DOM' =>
+		script_handlers => {
+			default => sub {
+				$script_src = $_[2]
+			}
+		}
+	);
+	ok $p->scripts_enabled, 'scripts enabled by default';
+
+	my $url = data_url(<<'END');
+		<HTML><head><title>oetneotne</title></head>
+		<script>this is a script</script>
+END
+	$p->scripts_enabled(0);
+	$m->get($url);
+	is $script_src, undef, 'disabling scripts works';
+	$m->get($url);
+	is $script_src, undef, 'the disabled settings survives a ->get';
+	$m->plugin("DOM")->scripts_enabled(1);
+	$m->get($url);
+	is $script_src, 'this is a script', 're-enabling scripts works';
+}

@@ -1,16 +1,14 @@
-Hmmm, this list seems to be getting longer, rather than shorter.
 
 finish adding mech callback routines
 write tests
 finish adding browser-only js features (i.e., non-DOM stuff like navigator, window properties/methods and whatever else)
 frames
-windows
-figure out a way to make AbstractViews work (window == window.document.defaultView)
+multiple windows
+make AbstractViews work (window == window.document.defaultView)
 revisit the event handler scope chain; make sure it has everything it's supposed to; document it
 add support for HTML::DOM’s utf-16 methods.
-javascript: URIs
 have a look at the HTML 5 spec which is supposed to have something about the Window object
-window.onload etc.
+make setTimeout work with functions and with other scripting languages
 whatever else I've forgotten
 
 

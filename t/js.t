@@ -3,7 +3,7 @@
 # I have not got round to writing a complete set of tests yet. For now I’m
 # just testing for fixed bugs and other changes.
 
-use strict; use warnings;
+use strict; use warnings; use utf8;
 use lib 't';
 use Test::More;
 
@@ -86,7 +86,7 @@ use tests 2; # navigator
 	$js->eval('
 		is(typeof this.navigator, "object","navigator object");
 		is(navigator.appName,"WWW::Mechanize","navigator.appName");
-	');
+	') or diag $@;
 }
 
 use tests 2; # multiple JS environments
@@ -108,3 +108,11 @@ use tests 1; # location stringification
 	);
 }
 
+use tests 2; # javascript:
+{
+	my $uri = $m->uri;
+	$m->get("Javascript:%20foo=%22ba%ca%80%22");
+	is $js->eval('foo'), 'baʀ', 'javascript: URLs are executed';
+diag $@ if $@;
+	is $m->uri, $uri, '  and do not affect the page stack';
+}

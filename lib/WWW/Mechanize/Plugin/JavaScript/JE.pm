@@ -4,19 +4,88 @@ use strict;   # :-(
 use warnings; # :-(
 
 use Carp 'croak';
+use Hash::Util::FieldHash::Compat 'fieldhash';
 use HTML::DOM::Interface ':all'; # for the constants
 use JE 0.022;
 use Scalar::Util qw'weaken';
+use WWW::Mechanize::Plugin::DOM;
 
-our $VERSION = '0.003';
+our $VERSION = '0.004';
 our @ISA = 'JE';
+
+fieldhash my %parathia;
 
 # No need to implement eval since JE's method
 # is sufficient
 
+my @types;
+$types[BOOL] = Boolean =>;
+$types[STR ] = String  =>;
+$types[NUM ] = Number  =>;
+$types[OBJ ] = null    =>;
+
 sub new {
 	my $self = SUPER::new{shift};
+	$parathia{$self} = shift;;
+	
+	my $i = \%WWW'Mechanize'Plugin'DOM'Window'Interface;
+	for(grep !/^_/ && $$i{$_} & METHOD, =>=> keys %$i) {
+		my $method = $_;
+		my $type = $$i{$_};
+		$self->new_method($_ => sub {
+			my $parathi = $parathia{my $self = shift};
+			# undocumented JE method:
+			$self->_cast(
+				scalar $parathi->$method(@_),
+				$types[$type&TYPE]
+			);
+		});
+	}
+	for(grep !/^_/ && !($$i{$_}&METHOD) =>=> keys %$i) {
+		my $name = $_;
+		next if $name =~ /^(?:window|self)\z/; # for efficiency
+		my $type = $$i{$_};
+		if ($type & READONLY) {
+			$self->prop({
+				name => $_,
+				readonly => 1,
+				fetch => sub {
+					my $self = shift;
+					$parathia{$self}->$name;
+					$self->_cast(
+						scalar
+						  $parathia{$self}->$name,
+						$types[$type&TYPE]
+					);
+				},
+			});
+		}
+		else {
+			$self->prop({
+				name => $_,
+				fetch => sub {
+					my $self = shift;
+					$self->_cast(
+						scalar
+						  $parathia{$self}->$name,
+						$types[$type&TYPE]
+					);
+				},
+				store => sub {
+					my $self = shift;
+					$self->_cast(
+						scalar
+						  $parathia{$self}
+						    ->$name(shift),
+						$types[$type&TYPE]
+					);
+				},
+			});
+		}
+	}
+
 	$self->prop('window' => $self);
+	$self->prop('self' => $self);
 }
 
 sub set {
@@ -34,12 +103,6 @@ sub set {
 	$obj->{$prop} = $val;
 	return;
 }
-
-my @types;
-$types[BOOL] = Boolean =>;
-$types[STR ] = String  =>;
-$types[NUM ] = Number  =>;
-$types[OBJ ] = null    =>;
 
 sub bind_classes {
 	my($self, $classes) = @_;
@@ -78,7 +141,7 @@ sub bind_classes {
 		if (exists $$i{_isa} and !exists $self->{$$i{_isa}}) {
 			push @defer, [\@args, $$i{_isa}, $make_constants]
 		} else {
-#			use Data::Dumper; print Dumper \@args if $_ =~ /XMLHttp/;
+#			use Data::Dumper; print Dumper \@args if $_ !~ /HTML|CSS/;
 			$self->bind_class(@args);
 			defined $make_constants and &$make_constants;
 		}
@@ -162,7 +225,7 @@ WWW::Mechanize::Plugin::JavaScript::JE - JE backend for WMPJS
 
 =head1 VERSION
 
-0.003 (alpha)
+0.004 (alpha)
 
 =head1 DESCRIPTION
 
@@ -170,6 +233,13 @@ This little module is a bit of duct tape to connect the JavaScript plugin
 for L<WWW::Mechanize> to the JE JavaScript engine. Don't use this module
 directly. For usage, see
 L<WWW::Mechanize::Plugin::JavaScript>.
+
+=head1 BUGS
+
+DOM members that are supposed to return a string or null (which is how a
+DOMString is represented in JavaScript) currently always return a string.
+In cases where it should be the null value, an empty string is returned
+instead.
 
 =head1 REQUIREMENTS
 

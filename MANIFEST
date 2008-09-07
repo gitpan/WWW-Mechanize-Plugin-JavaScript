@@ -1,5 +1,7 @@
 Changes
 lib/WWW/Mechanize/Plugin/DOM.pm
+lib/WWW/Mechanize/Plugin/DOM/Location.pod
+lib/WWW/Mechanize/Plugin/DOM/Window.pm
 lib/WWW/Mechanize/Plugin/JavaScript/JE.pm
 lib/WWW/Mechanize/Plugin/JavaScript.pm
 t/blank.html

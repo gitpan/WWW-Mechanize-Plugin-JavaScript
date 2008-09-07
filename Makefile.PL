@@ -6,15 +6,19 @@ use ExtUtils::MakeMaker;
 # I’m keeping these separate, in case these modules should ever be dis-
 # tributed individually:
 %dom_prq = (
-	Carp                => 0,
-	Encode              => 0,
-	HTML::DOM           =>  .010, # content_offset
-	HTTP::Headers::Util => 0,
-	LWP::Simple         => 0, # temporary prerq
-	Scalar::Util        => 0,
-	strict              => 0,
-	URI                 => 0,
-	warnings            => 0,
+	Carp                          => 0,
+	Encode                        => 0,
+	Hash::Util::FieldHash::Compat => 0,
+	HTML::DOM                     =>  .010, # content_offset
+	HTML::DOM::Interface          =>  .019, # EventTarget
+	HTML::DOM::View               =>  .018, # inside-out; writa-
+	HTTP::Headers::Util           => 0,     # ble document
+	LWP::Simple                   => 0, # temporary prerq
+	Scalar::Util                  => 0,
+	strict                        => 0,
+	Time::HiRes                   => 0,
+	URI                           => 0,
+	warnings                      => 0,
 # for testing:
 	lib        => 0,
 	Test::More => 0,
@@ -22,25 +26,27 @@ use ExtUtils::MakeMaker;
 );
 %js_prq = (
 	CSS::DOM::Interface  => 0,
+	Encode               => 0,
 	HTML::DOM::Interface => 0,
-	overload             => 0,
 	Scalar::Util         => 0,
 	strict               => 0,
-	Time::HiRes          => 0,
-	URI                  => 0,
+	URI::Escape          => 0,
 	warnings             => 0,
+#	WWW::Mechanize::Plugin::DOM   =>  .005, # Window
 # for testing:
 	lib        => 0,
 	Test::More => 0,
 	URI::file  => 0,
 );
 %je_prq = (
-	Carp                 => 0,
-	HTML::DOM::Interface => 0,
-	JE                   =>  .022, # bind_class’s unwrap option
-	Scalar::Util         => 0,   
-	strict               => 0,
-	warnings             => 0,
+	Carp                          => 0,
+	Hash::Util::FieldHash::Compat => 0,
+	HTML::DOM::Interface          => 0,
+	JE                            =>  .022, # bind_class’s
+	Scalar::Util                  => 0,     # unwrap option
+	strict                        => 0,
+	warnings                      => 0,
+#	WWW::Mechanize::Plugin::DOM   =>  .005, # Window
 # for testing:
 	lib        => 0,
 	Test::More => 0,
@@ -59,7 +65,7 @@ eval{require WWW::Mechanize}
 or $prq{WWW::Mechanize} = 9999, print <<, "\n" ;
 This module requires the experimental version of WWW::Mechanize that
 is to be found at the following URL:
-http://www-mechanize.googlecode.com/svn/branches/plugins/
+http://www-mechanize.googlecode.com/svn/wm/branches/plugins/
 
 WriteMakefile(
     NAME                => 'WWW::Mechanize::Plugin::JavaScript',
