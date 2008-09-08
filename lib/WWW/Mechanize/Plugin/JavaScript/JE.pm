@@ -10,7 +10,7 @@ use JE 0.022;
 use Scalar::Util qw'weaken';
 use WWW::Mechanize::Plugin::DOM;
 
-our $VERSION = '0.004';
+our $VERSION = '0.005';
 our @ISA = 'JE';
 
 fieldhash my %parathia;
@@ -20,7 +20,7 @@ fieldhash my %parathia;
 
 my @types;
 $types[BOOL] = Boolean =>;
-$types[STR ] = String  =>;
+$types[STR ] = DOMString  =>;
 $types[NUM ] = Number  =>;
 $types[OBJ ] = null    =>;
 
@@ -83,6 +83,16 @@ sub new {
 			});
 		}
 	}
+
+	# ~~~ This is *such* a hack! If anyone wants to help me fix JE’s
+	#     screwed up type-conversion system (which makes my head hurt),
+	#     please let me know.
+	$self->new_function("DOMString", sub {
+		if(ref($_[0]) =~ /^JE::(?:Null|Undefined)\z/) {
+			return $_[0]->global->null;
+		}
+		return $_[0]->to_string;
+	});
 
 	$self->prop('window' => $self);
 	$self->prop('self' => $self);
@@ -225,7 +235,7 @@ WWW::Mechanize::Plugin::JavaScript::JE - JE backend for WMPJS
 
 =head1 VERSION
 
-0.004 (alpha)
+0.005 (alpha)
 
 =head1 DESCRIPTION
 
@@ -233,13 +243,6 @@ This little module is a bit of duct tape to connect the JavaScript plugin
 for L<WWW::Mechanize> to the JE JavaScript engine. Don't use this module
 directly. For usage, see
 L<WWW::Mechanize::Plugin::JavaScript>.
-
-=head1 BUGS
-
-DOM members that are supposed to return a string or null (which is how a
-DOMString is represented in JavaScript) currently always return a string.
-In cases where it should be the null value, an empty string is returned
-instead.
 
 =head1 REQUIREMENTS
 

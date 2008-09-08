@@ -4,7 +4,7 @@ package WWW::Mechanize::Plugin::DOM;
 # languages may use DOM as well. Anyone have time to implement Acme::Chef
 # bindings for Mech? :-)
 
-$VERSION = '0.005';
+$VERSION = '0.006';
 
 use 5.006;
 
@@ -311,7 +311,7 @@ WWW::Mechanize::Plugin::DOM - HTML Document Object Model plugin for Mech
 
 =head1 VERSION
 
-0.005 (alpha)
+0.006 (alpha)
 
 =head1 SYNOPSIS
 
@@ -495,7 +495,7 @@ The C<window> method dies if the page is not HTML.
 
 =head1 AUTHOR & COPYRIGHT
 
-Copyright (C) 2007 Father Chrysostomos
+Copyright (C) 2007-8 Father Chrysostomos
 <C<< join '@', sprout => join '.', reverse org => 'cpan' >>E<gt>
 
 This program is free software; you may redistribute it and/or modify

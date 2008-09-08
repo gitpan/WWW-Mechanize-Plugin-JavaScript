@@ -116,3 +116,20 @@ use tests 2; # javascript:
 diag $@ if $@;
 	is $m->uri, $uri, '  and do not affect the page stack';
 }
+
+use tests 1; # custom functions for alert, etc.
+{
+	my $which = '';
+	(my $m = new WWW::Mechanize)->use_plugin('JavaScript',
+		alert => sub { $which .= "alert($_[0])" },
+		confirm => sub { $which .= "confirm($_[0])" },
+		prompt => sub { $which .= "prompt($_[0])" }
+	);
+	$m->get("data:text/html,");
+
+	$m->plugin("JavaScript")->eval('
+		alert("foo"), confirm("bar"), prompt("baz")
+	');
+	is $which , 'alert(foo)confirm(bar)prompt(baz)',
+		'custom alert, etc.';
+}

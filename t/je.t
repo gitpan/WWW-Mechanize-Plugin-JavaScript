@@ -48,3 +48,31 @@ use tests 1; # unwrap
 	is($js->eval('baz.baz(null, undefined, 3, "4", baz)'),
 	   'Foo::Bar,^^,^^,JE::Number,JE::String,Foo::Bar', 'unwrap');
 }
+
+use tests 4; # null DOMString
+{
+	sub Phoo::Bar::bar {
+		return (undef,765)[!!pop];
+	}
+	sub Phoo::Bar::baz { "heelo" }
+	sub Phoo::Bar::nullbaz {}
+	$js->bind_classes({
+		'Phoo::Bar' => 'Phoo', 
+		Phoo => {
+			bar => METHOD | STR,
+			baz => STR,
+			nullbaz => STR,
+		}
+	});
+	$js->set('baz', bless[], 'Phoo::Bar');
+	ok($js->eval('baz.bar(0) === null'),
+		'undef --> null conversion for a DOMString retval');
+	ok($js->eval('baz.bar(1) === "765"'),
+		'any --> string conversion for a DOMString retval');
+	ok($js->eval('baz.nullbaz === null'),
+		'undef --> null conversion when getting a DOMString prop');
+	ok($js->eval('baz.baz === "heelo"'),
+		'any --> string conversion when getting a DOMString prop');
+}
+
+

@@ -1,15 +1,30 @@
-WWW::Mechanize::Plugin::JavaScript and ::DOM, version 0.005 (alpha)
+WWW-Mechanize-Plugin-JavaScript-0.005a (alpha)
 
 Plugins for WWW::Mechanize that provide HTML DOM and Java-
 Script support.
+
+This distribution contains:
+• WWW::Mechanize::Plugin::DOM            0.006
+• WWW::Mechanize::Plugin::JavaScript     0.005
+• WWW::Mechanize::Plugin::JavaScript::JE 0.005
 
 This set of modules is at a very early stage. Only a few features have
 been implemented so far. Whether it will work for a particular case is
 hard to say. Try it and see. (And patches are always welcome.)
 
 
-CHANGES IN THIS RELEASE
+RECENT CHANGES
 
+0.005a
+------
+Two bug fixes:
+• The alert, confirm and prompt options to the JavaScript plugin,
+  which were broken in the previous release, work again.
+• Properties and methods that are supposed to return DOMStrings can
+  now return  null.  They used to  return  the  string  ‘undefined’.
+
+0.005
+-----
 Four new features (see the Changes file for more detail):
 • New scripts_enabled method (DOM plugin) for enabling/disa-
   bling scripts.
@@ -72,7 +87,7 @@ Or try using man (it's faster, in my experience):
 
 COPYRIGHT AND LICENCE
 
-Copyright © 2007 Father Chrysostomos
+Copyright © 2007-8 Father Chrysostomos
 
 This program is free software; you may redistribute it and/or modify
 it under the same terms as perl.

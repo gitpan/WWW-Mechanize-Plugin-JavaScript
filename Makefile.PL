@@ -14,6 +14,7 @@ use ExtUtils::MakeMaker;
 	HTML::DOM::View               =>  .018, # inside-out; writa-
 	HTTP::Headers::Util           => 0,     # ble document
 	LWP::Simple                   => 0, # temporary prerq
+	overload                      => 0,
 	Scalar::Util                  => 0,
 	strict                        => 0,
 	Time::HiRes                   => 0,

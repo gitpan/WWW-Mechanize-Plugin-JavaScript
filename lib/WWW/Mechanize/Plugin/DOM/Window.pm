@@ -2,7 +2,7 @@ package WWW::Mechanize::Plugin::DOM::Window;
 
 use strict; use warnings; no warnings qw 'utf8 parenthesis';
 
-our $VERSION = '0.005';
+our $VERSION = '0.006';
 
 use Hash::Util::FieldHash::Compat 'fieldhash';
 use HTML::DOM::Interface 0.019 ':all';
@@ -57,20 +57,20 @@ sub alert {
 }
 sub confirm {
 	my $self = shift;
-	($self->[cnfm]||$self->mech->die(
+	($self->[cnfm]||$self->[mech]->die(
 		"There is no default confirm function"
 	 ))->(@_)
 }
 sub prompt {
 	my $self = shift;
-	($self->[prmp]||$self->mech->die(
+	($self->[prmp]||$self->[mech]->die(
 		"There is no default prompt function"
 	 ))->(@_)
 }
 
-sub alert_function   { $_[0][lert]     = $_[1]; }
-sub confirm_function { $_[0][confirm] = $_[1]; }
-sub prompt_function  { $_[0][prompt] = $_[1]; }
+sub set_alert_function   { $_[0][lert]     = $_[1]; }
+sub set_confirm_function { $_[0][cnfm] = $_[1]; }
+sub set_prompt_function  { $_[0][prmp] = $_[1]; }
 
 sub location {
 	my $self = shift;
@@ -134,7 +134,7 @@ use URI;
 use HTML::DOM::Interface qw'STR METHOD VOID';
 use Scalar::Util 'weaken';
 
-our $VERSION = '0.005';
+our $VERSION = '0.006';
 
 use overload fallback => 1, '""' => sub{${+shift}->uri};
 
@@ -269,7 +269,7 @@ package WWW::Mechanize::Plugin::DOM::Navigator;
 use HTML::DOM::Interface qw'STR READONLY';
 use Scalar::Util 'weaken';
 
-our $VERSION = '0.005';
+our $VERSION = '0.006';
 
 $$_{~~__PACKAGE__} = 'Navigator',
 $$_{Navigator} = {
@@ -313,7 +313,7 @@ WWW::Mechanize::Plugin::DOM::Window - Window object for the DOM plugin
 
 =head1 VERSION
 
-Version 0.005
+Version 0.006
 
 =head1 DESCRIPTION
 

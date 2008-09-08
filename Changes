@@ -1,6 +1,18 @@
 Revision history for WWW::Mechanize::Plugin::JavaScript and ::DOM
 
-0.005   ?? September, 2008
+0.005a  7 September, 2008
+        The DOM plugin (0.006):
+        • The  window  object’s  *_function  methods  (alert_function,
+          etc.)  have been renamed to  set_*_function,  which is what
+          the docs already said;  and they actually work  now.  As  a
+          result,  the corresponding options to the JavaScript plugin
+          now work again. (They were broken in the previous release.)
+        JE back end (0.005):
+        • Properties and methods  that  are  supposed  to  return
+          DOMStrings can now return null. They used to return the
+          string ‘undefined’.
+
+0.005   7 September, 2008
         The DOM plugin:
         • New scripts_enabled method for enabling/disabling scripts.
         • The window object has been disentangled from the JavaScript
