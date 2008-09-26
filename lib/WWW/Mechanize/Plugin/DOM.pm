@@ -4,22 +4,24 @@ package WWW::Mechanize::Plugin::DOM;
 # languages may use DOM as well. Anyone have time to implement Acme::Chef
 # bindings for Mech? :-)
 
-$VERSION = '0.006';
+$VERSION = '0.007';
 
 use 5.006;
 
 use strict;
-use warnings;
+use warnings; no warnings qw 'utf8 parenthesis bareword';
 
 use Encode qw'encode decode';
 use Hash::Util::FieldHash::Compat 'fieldhash';
-use HTML::DOM 0.010;
+use HTML::DOM 0.021;
 use HTTP::Headers::Util 'split_header_words';
 use Scalar::Util 'weaken';
+no URI();
 no WWW::Mechanize ();
 no WWW::Mechanize::Plugin::DOM::Window ();
 
 fieldhash my %parathia; # keyed by mech
+fieldhash my %mech_per_frame; # keyed by (i)frame element
 
 sub init { # expected to return a plugin object that the mech object will
            # use to communicate with the plugin.
@@ -30,7 +32,9 @@ sub init { # expected to return a plugin object that the mech object will
 		script_handlers => {},
 		event_attr_handlers => {},
 		s => 1, # scriptable
+		mech => $mech,
 	}, $package;
+	weaken $self->{mech};
 
 	$mech->add_handler(
 		parse_html => \&_parse_html
@@ -40,7 +44,7 @@ sub init { # expected to return a plugin object that the mech object will
 	        my $mech = shift;
 	        $mech->is_html or WWW::Mechanize::next_handler;
 	        my $stuff = (my $self = $mech->plugin('DOM'))
-	            ->tree->documentElement->as_HTML;
+	            ->tree->innerHTML;
 	        defined $$self{charset} ? encode $$self{charset}, $stuff :
 			$stuff;
 	    }
@@ -60,9 +64,22 @@ sub init { # expected to return a plugin object that the mech object will
 			shift->plugin('DOM')->tree->forms
 		}
 	);
-	# ~~~ finish the various handlers
+	$mech->add_handler( extract_links => sub {
+		tie my @links, WWW'Mechanize'Plugin'DOM'Links:: =>
+			scalar shift->plugin('DOM')->tree->links
+		;\@links;
+	});
+	$mech->add_handler( extract_images => sub {
+		my $doc = shift->plugin('DOM')->tree;
+		my $list = HTML::DOM::NodeList::Magic->new(
+		    sub { grep tag $_ =~ /^i(?:mg|nput)\z/,
+			$doc->descendants },
+		    $doc
+		);
 
-#	$self->options(@opts);
+		tie my @images, WWW'Mechanize'Plugin'DOM'Images:: => $list;
+		;\@images;
+	});
 
 	$self;
 }
@@ -79,30 +96,11 @@ sub _parse_html {
 
 	$tree->error_handler(sub{$mech->warn($@)});
 
-	# ~~~ Do I need to add support for event hooks here?
-	$tree->default_event_handler(sub {
-		my $event = shift;
-		my $type = $event->type;
-		my $tag = (my $target = $event->target)->tag;
-		# ~~~ I need to finish adding all these cases
-		if($type eq 'click' && $tag eq 'input') {
-			my $input_type = $target->type;
-			if($input_type eq 'submit') {
-				# ~~~ Should cases like this go into
-				#     HTML::DOM? How would that fit into
-				#     the current API? Or would the API
-				#     have to be reworked?
-				$target->form->submit;
-			}
-			elsif($input_type eq 'reset') {
-				$target->form->reset;
-				# ~~~ not currently supported by HTML::DOM
-				#     (.010)
-			}
-		}
-		if($type eq 'submit' && $tag eq 'form') {
-			$mech->request($target->make_request);
-		}
+	$tree->default_event_handler_for( link => sub {
+		$mech->get(shift->target->href)
+	});
+	$tree->default_event_handler_for( submit => sub {
+		$mech->request(shift->target->make_request);
 	});
 
 	if(%{$$self{script_handlers}} || %{$$self{event_attr_handlers}}) {
@@ -129,20 +127,28 @@ sub _parse_html {
 			    my $uri;
 			    my($inline, $code, $line) = 0;
 			    if($uri = $elem->attr('src')) {
-			        # ~~~ Is there some way to get the
-			        #     Mech object to do this with-
-			        #    out pushing the page stack?
-			        require LWP::Simple;
-			        require URI;
+			        my $clone = $mech->clone->clear_history(1);
 			        my $base = $mech->base;
    			        $uri = URI->new_abs( $uri, $base )
 			            if $base;
-			        defined(
-			           $code = LWP::Simple::get($uri)
-			        ) or $mech->warn("couldn't get script $uri"),return;
-			        # ~~~ I probably need to provide better
-			        #     diagnostics. Maybe I can't use
-			        #     LWP::Simple.
+			        my $res = $clone->get($uri);
+			        $res->is_success or 
+			          $mech->warn("couldn't get script $uri: "
+			            . $res->status_line
+			        );
+
+			        # Find out the encoding:
+			        my $cs = {
+			          map @$_,
+			          split_header_words $res->header(
+			            'Content-Type'
+			          )
+	 		        }->{charset};
+
+			        $code = decode $cs||$elem->charset
+			            ||$tree->charset||'latin1',
+			          $res->content;
+			        
 			        
 			        $line = 1;
 			    }
@@ -183,6 +189,7 @@ sub _parse_html {
 
 		if(%{$$self{event_attr_handlers}}) {
 			$tree->event_attr_handler(sub {
+				return unless $self->{s};
 				my($elem, $event, $code, $offset) = @_;
 				my $lang = $elem->attr('language');
 				defined $lang or $lang = $script_type;
@@ -223,16 +230,31 @@ sub _parse_html {
 	});
 
 	$tree->defaultView(
-		my $view = $parathia{$mech} ||=
-			new WWW'Mechanize'Plugin'DOM'Window $mech
+		my $view = $self->window
 	);
+	$tree->event_parent($view);
 	$view->document($tree);
+	$tree->set_location_object($view->location);
+
+	$tree->elem_handler(iframe => my $frame_handler = sub {
+		my ($doc,$elem) = @_;
+		my $m = $mech->clone->clear_history(1);
+		# We have to have this extra reference, or the mech object
+		# won’t have any strong refs at all:
+		$mech_per_frame{$elem} = $m;
+		$elem->contentWindow(my $subwin=$m->plugin("DOM")->window);
+		$subwin->_set_top(my $top = $doc->defaultView);
+		defined(my $src = $elem->src) or return;
+		$m->get(new_abs URI $src, $mech->base);
+	});
+	$tree->elem_handler(frame => $frame_handler);
 
 	# Find out the encoding:
 	$$self{charset} = my $cs = {
 		map @$_,
 		split_header_words $mech->response->header('Content-Type')
 	 }->{charset};
+	$tree->charset($cs||'iso-8859-1');
 
 	$tree->write(defined $cs ? decode $cs, $src : $src);
 	$tree->close;
@@ -285,17 +307,25 @@ sub options {
 
 sub clone {
 	my $self = shift;
-	bless { map +($_=>$$self{$_}), qw[
+	my $other = bless { map +($_=>$$self{$_}), qw[
 		script_handlers event_attr_handlers s
-	]}, ref $self
+	]}, ref $self;
+	weaken($other->{mech} = shift);
+	$other;
 }
 
 sub tree { $_[0]{tree} }
-sub window { $_[0]{tree}->defaultView }
+sub window {
+	$parathia{$_[0]{mech}} ||=
+			new WWW'Mechanize'Plugin'DOM'Window $_[0]{mech};
+}
 
 sub scripts_enabled {
 	my $old = (my $self = shift)->{s};
-	$self->{s} = shift if @_;
+	if(@_) {{
+		$self->{s} = $_[0];
+		($self->{tree} ||last) ->event_listeners_enabled(shift) ;
+	}}
 	$old
 }
 
@@ -305,13 +335,64 @@ sub check_timers {
 }
 
 
+package WWW::Mechanize::Plugin::DOM::Links;
+
+our$ VERSION = '0.007';
+
+use WWW::Mechanize::Link;
+
+sub TIEARRAY {
+	bless \(my $links = pop), shift;
+}
+
+sub FETCH     {
+	my $link = ${$_[0]}->[$_[1]];
+	return new WWW'Mechanize'Link::{
+		url => $link->attr('href'),
+		text => $link->as_text,
+		name => $link->attr('name'),
+		tag => $link->tag,
+		base => $link->ownerDocument->base,
+		attrs => {$link->all_external_attr},
+	}
+}
+sub FETCHSIZE { scalar @${$_[0]} }
+sub EXISTS    { exists ${$_[0]}->links->[$_[1]] }
+
+
+package WWW::Mechanize::Plugin::DOM::Images;
+
+our$ VERSION = '0.007';
+
+use WWW::Mechanize::Image;
+
+sub TIEARRAY {
+	bless \(my $links = pop), shift;
+}
+
+sub FETCH     {
+	my $img = ${$_[0]}->[$_[1]];
+	return new WWW'Mechanize'Image::{
+		url => $img->attr('src'),
+		name => $img->attr('name'),
+		tag => $img->tag,
+		base => $img->ownerDocument->base,
+		height => $img->attr('height'),
+		width => $img->attr('width'),
+		alt => $img->attr('alt'),
+	}
+}
+sub FETCHSIZE { scalar @${$_[0]} }
+sub EXISTS    { exists ${$_[0]}->links->[$_[1]] }
+
+
 =head1 NAME
 
 WWW::Mechanize::Plugin::DOM - HTML Document Object Model plugin for Mech
 
 =head1 VERSION
 
-0.006 (alpha)
+0.007 (alpha)
 
 =head1 SYNOPSIS
 
@@ -420,10 +501,9 @@ if the appropriate interval has elapsed.
 =item scripts_enabled ( $new_val )
 
 This returns a boolean indicating whether scripts are enabled. It is true
-by default. You can disable scripts by passing a false value.
-
-B<Bug:> This does not
-disable event handlers that are already registered.
+by default. You can disable scripts by passing a false value. When you
+disable scripts, event handlers are also disabled, as is the registration
+of event handlers by HTML event attributes.
 
 =head1 THE 'LOAD' EVENT
 
@@ -443,7 +523,7 @@ a list of members of the window object.
 
 =head1 PREREQUISITES
 
-L<HTML::DOM> 0.019 or later
+L<HTML::DOM> 0.021 or later
 
 L<WWW::Mechanize>
 
@@ -461,20 +541,7 @@ L<Hash::Util::FieldHash::Compat>
 
 =item *
 
-The onunload event is not yet supported. The window object is not yet part
-of the event dispatch chain. Some events
-do not yet do everything they are supposed to; e.g., a link's C<click>
-method does not go to the next page.
-
-=item *
-
-This plugin does not yet provide WWW::Mechanize with all the necessary
-callback routines (for C<extract_images>, etc.).
-
-=item *
-
-Currently, external scripts referenced within a page are always read as
-Latin-1. This will be fixed.
+The onunload event is not yet supported.
 
 =item *
 
@@ -484,12 +551,42 @@ assignment to C<href>.
 
 =item *
 
-Disabling scripts does not currently affect event handlers that are already
-registered.
+The window object's C<document> property does not currently get updated
+when you go back.
 
 =item *
 
-The C<window> method dies if the page is not HTML.
+It does not hook into L<WWW::Mechanize>'s C<follow_link> feature to
+run event handlers.
+
+=item *
+
+There is no support for XHTML.
+
+=item *
+
+The 'about:blank' URL is not yet supported.
+
+=item *
+
+If you try to get any of the attributes of the location object (or
+stringify the loc object) when no browsing has happened yet, you'll get an
+error. (This should return 'about:blank'.)
+
+=item *
+
+Fetching a URL that differs from the current page's only by the fragment
+currently creates a brand new DOM object and scripting environment.
+
+=item *
+
+There is nothing to prevent infinite recursion when frames have circular
+references.
+
+=item *
+
+Frames each have a Mech object. There is currently no way to get at it
+without breaking encapsulation.
 
 =back
 

@@ -1,19 +1,38 @@
-WWW-Mechanize-Plugin-JavaScript-0.005a (alpha)
+WWW-Mechanize-Plugin-JavaScript-0.006 (alpha)
 
 Plugins for WWW::Mechanize that provide HTML DOM and Java-
 Script support.
 
 This distribution contains:
-• WWW::Mechanize::Plugin::DOM            0.006
-• WWW::Mechanize::Plugin::JavaScript     0.005
-• WWW::Mechanize::Plugin::JavaScript::JE 0.005
-
-This set of modules is at a very early stage. Only a few features have
-been implemented so far. Whether it will work for a particular case is
-hard to say. Try it and see. (And patches are always welcome.)
+• WWW::Mechanize::Plugin::DOM            0.007
+• WWW::Mechanize::Plugin::JavaScript     0.006
+• WWW::Mechanize::Plugin::JavaScript::JE 0.006
 
 
 RECENT CHANGES
+
+(See the Changes file for the long version.)
+
+0.006
+-----
+• Support for (i)frames
+• The window object is now part of the event dispatch chain.
+• You can now run JS code without an HTML document.
+• When a link in the DOM is clicked (via trigger_event or the click
+  method), it now goes to another page.
+• Mech’s link- and image-related methods now extract info
+  from the DOM.
+• Scripts are properly decoded and are no longer always treated
+  as Latin 1.
+• The DOM tree’s charset attribute is now set.
+• The scripts_enabled method now disables event handlers as well as
+  <script>s.
+• You can now specify custom functions for alert, etc., via the JS
+  plugin even after the JS environment has been created.
+• !doctype declarations are no longer dropped from the HTML returned
+  by Mech’s ‘content’ method.
+• The document object now has its location object set. (Thanks to
+  David Williams for spotting this.)
 
 0.005a
 ------
@@ -61,10 +80,11 @@ This module requires:
 
 - JE 0.022 or higher
 
-- HTML::DOM 0.019 or higher
+- HTML::DOM 0.021 or higher
 
-- The experimental version of WWW::Mechanize available at
-  http://www-mechanize.googlecode.com/svn/wm/branches/plugins/
+- The experimental  version  of  WWW::Mechanize  available  at
+  http://www-mechanize.googlecode.com/svn/wm/branches/plugins/,
+  revision 497 or higher
 
 - CSS::DOM
 

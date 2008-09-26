@@ -10,10 +10,11 @@ use JE 0.022;
 use Scalar::Util qw'weaken';
 use WWW::Mechanize::Plugin::DOM;
 
-our $VERSION = '0.005';
+our $VERSION = '0.006';
 our @ISA = 'JE';
 
 fieldhash my %parathia;
+fieldhash my %js_envs;
 
 # No need to implement eval since JE's method
 # is sufficient
@@ -26,7 +27,8 @@ $types[OBJ ] = null    =>;
 
 sub new {
 	my $self = SUPER::new{shift};
-	$parathia{$self} = shift;;
+	$parathia{$self} = my $parathi = shift;;
+	weaken( $js_envs{$parathi} = $self );
 	
 	my $i = \%WWW'Mechanize'Plugin'DOM'Window'Interface;
 	for(grep !/^_/ && $$i{$_} & METHOD, =>=> keys %$i) {
@@ -94,8 +96,53 @@ sub new {
 		return $_[0]->to_string;
 	});
 
+	$self->bind_class(
+		package => 'WWW::Mechanize::Plugin::DOM::Window',
+		wrapper => sub {
+			my ($self, $window) = @_;
+			# ~~~ This needs to be modified to create a special
+			#     restrictive wrapper if the $window has a
+			#     different origin.
+			$js_envs{$window}
+				# We have to use this roundabout method
+				# rather than __PACKAGE__->new($window),
+				# because the JS plugin needs to do its
+				# stuff (binding classes, etc.).
+				|| $window->mech->plugin("JavaScript")
+				    ->eval('this');
+				# ~~~ and it looks as though we need to
+				#     modify the JS plugin to make the back
+				#     end accessible (to avoid the eval).
+		},
+	);
+	# ~~~ We also need a 'JE' wrapper, that will create a special
+	#     objcet that delegates to the JS environment currently
+	#     belonging to the window.
+
+	# for speed:
+	$self->prop('frames' => $self);
 	$self->prop('window' => $self);
 	$self->prop('self' => $self);
+}
+
+sub prop {
+	my $self = shift;
+	return $self->SUPER::prop(@_) if ref $_[0] eq 'HASH';
+	
+	my $val = $self->SUPER::prop(@_);
+	return $val if defined $val;
+
+	my $name = shift;
+	return $_[0] if @_;
+
+	my $window = $parathia{$self};
+
+	if($name =~ /^(?:0|[1-9]\d*)\z/ and $name < 4294967295) {
+		return $self->upgrade($window->[$name]);
+	}
+	else {
+		return $self->upgrade($window->{$name});
+	}
 }
 
 sub set {

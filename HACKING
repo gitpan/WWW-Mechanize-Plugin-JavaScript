@@ -1,0 +1,48 @@
+
+This file contains a random assortment of notes that might be helpful to
+someone hacking on wmpjs and related modules.
+
+
+THE BIG PICTURE
+
+When you call $mech->get(...), wmpdom’s parse_html handler is called, which
+1. creates an HTML::DOM object,
+2. installs script and event handlers,
+3. sets the defaultView to a Window object¹,
+4. sets the Window object’s document to the DOM object and
+5. passes the HTML code through to the DOM object, which
+    1. creates the tree,
+    2. running any scripts² and 
+    3. creating event handlers.
+6. Finally, it triggers the load event.
+
+¹There is only one window object for each Mech object.  The DOM  plugin
+ stores these in a field hash. It creates a new one only when necessary.
+
+²When a script is run, if it is a JS script, the JS plugin starts the
+ script engine if it is not already started.
+
+When the script engine is started:
+1. wmpjs passes the Window object to the JS back end’s constructor.
+2. The back end creates a new object, making the Window object the global
+   object’s delegate.
+
+The back end has to do some magic to make sure that, when the global object
+is passed to another JS environment, it gets wrapped up in a proxy object
+that delegates to whichever global object corresponds to the  *window*.
+
+
+WEAK/STRONG REFERENCES
+
+==> strong
+--> weak
+
+Mech ==> window --> Mech
+                ==> document
+     ==> document --> window
+
+If we have an iframe, it’s
+                                      ==> win
+Mech ==> document ==> iframe ==> mech ==> doc
+     ==> window              ==> win ==> doc --> win
+                                     --> mech

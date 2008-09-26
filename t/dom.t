@@ -9,6 +9,7 @@ use Test::More;
 
 use utf8;
 
+use Scalar::Util 1.09 'refaddr';
 use URI::data;
 use URI::file;
 use WWW::Mechanize;
@@ -149,21 +150,29 @@ use tests 1; # window
 	isa_ok $p->window, 'WWW::Mechanize::Plugin::DOM::Window';
 }
 
-use tests 4; # scripts_enabled
+use tests 9; # scripts_enabled
 {
 	my $script_src;
+	my $event;
 
 	my $p = (my $m = new WWW::Mechanize)->use_plugin('DOM' =>
 		script_handlers => {
 			default => sub {
 				$script_src = $_[2]
 			}
-		}
+		},
+		event_attr_handlers => {
+			default => sub {
+				my $e = "@_[2,3]"; # event name & attr val
+				sub { $event = $e }
+			}
+		},
 	);
 	ok $p->scripts_enabled, 'scripts enabled by default';
 
 	my $url = data_url(<<'END');
 		<HTML><head><title>oetneotne</title></head>
+		<body onclick="do stough">
 		<script>this is a script</script>
 END
 	$p->scripts_enabled(0);
@@ -172,6 +181,381 @@ END
 	$m->get($url);
 	is $script_src, undef, 'the disabled settings survives a ->get';
 	$m->plugin("DOM")->scripts_enabled(1);
+	$m->plugin("DOM")->tree->body->trigger_event('click');
+	is $event, undef,
+	  'disabling scripts stops event handlers from being registered';
 	$m->get($url);
 	is $script_src, 'this is a script', 're-enabling scripts works';
+	$m->plugin("DOM")->tree->body->click;
+	is $event, 'click do stough',
+		'  and re-enables attr event handler registration as well';
+	$event=undef;
+	($p = $m->plugin("DOM"))->scripts_enabled(0);
+	$p->tree->body->trigger_event('click');
+	is $event, undef,
+	   'disabling scripts disabled event handlers already registered';
+	($p = $m->plugin("DOM"))->scripts_enabled(1);
+	$p->tree->body->trigger_event('click');
+	is $event, 'click do stough',
+	' & re-enabling them re-enables event handlers already registered';
+
+	$p->scripts_enabled(0);
+	$p->window->onfoo(sub{$event = 42});
+	$p->window->trigger_event('foo');
+	isn't $event, 42,
+	  'window event handlers are not called when scripts are off';
+}
+
+use tests 1; # window as part of event dispatch chain
+{
+	my $p = (my $m = new WWW::Mechanize)->use_plugin('DOM') ;
+	$m->get('data:text/html,');
+	my $w = $p->window;
+	my $targets;
+	$w                           ->onfoo(sub { $targets .= '-w' });
+	$w->document                 ->onfoo(sub { $targets .= '-d' });
+	$w->document->documentElement->onfoo(sub { $targets .= '-h' });
+	$w->document->body           ->onfoo(sub { $targets .= '-b' });
+	$w                      ->addEventListener( foo=>
+		sub { $targets .= '-w(c)' },1);
+	$w->document            ->addEventListener( foo=>
+		sub { $targets .= '-d(c)' }, 1);
+	$w->document->firstChild->addEventListener( foo=>
+		sub { $targets .= '-h(c)' }, 1);
+	$w->document->body      ->addEventListener( foo=>
+		sub { $targets .= '-b(c)' }, 1);
+	$w->document->body->trigger_event('foo');
+	is $targets, '-w(c)-d(c)-h(c)-b-h-d-w',
+		'window as part of the event dispatch chain';
+}
+
+use tests 1; # click events on links
+{
+	(my $m = new WWW::Mechanize)->use_plugin('DOM') ;
+	my $other_url = data_url <<'END';
+		<title>The other page</title><p>
+END
+	$m->get(data_url(<<END));
+		<HTML><head><title>oetneotne</title></head>
+		<a href="$other_url">click me </a>
+END
+	$m->plugin('DOM')->tree->links->[0]->click;
+	is $m->plugin('DOM')->tree->title, 'The other page',
+		'a click event on a link goes to the other page';
+}
+
+use tests 2; # Mech->links
+{
+	(my $m = new WWW::Mechanize)->use_plugin('DOM') ;
+	my $url = data_url <<'END';
+		<title>A page</title><p>
+		  <a name=link1 href=one.html target=a>Dis is link one.</a>
+		  <a name=link2 href=two.html target=b>Dis is link two.</a>
+		  <a name=link3 href=tri.html target=c>Diss link three.</a>
+END
+	$m->get($url);
+#	my $base = $m->base;
+# ~~~ We can’t test base for now, because of a URI bug.
+	is_deeply [
+		map {;
+			my $link = $_;
+			+{ map +($_ => $link->$_),
+				qw[ url text name tag attrs ] }
+		} $m->links
+	], [
+		{ url => 'one.html',
+		  text => 'Dis is link one.',
+		  name => 'link1',
+		  tag  => 'a',
+	#	  base => $base,
+		  attrs => {
+			name => 'link1', href => 'one.html', target => 'a',
+		  }, },
+		{ url => 'two.html',
+		  text => 'Dis is link two.',
+		  name => 'link2',
+		  tag  => 'a',
+	#	  base => $base,
+		  attrs => {
+			name => 'link2', href => 'two.html', target => 'b',
+		  }, },
+		{ url => 'tri.html',
+		  text => 'Diss link three.',
+		  name => 'link3',
+		  tag  => 'a',
+	#	  base => $base,
+		  attrs => {
+			name => 'link3', href => 'tri.html', target => 'c',
+		  }, },
+	], '$mech->links'
+	or require Data::Dumper, diag Data::Dumper::Dumper([
+		map {;
+			my $link = $_;
+			+[ map +($_ => $link->$_),
+				qw[ url text name tag attrs ] ]
+		} $m->links
+	]);
+
+	my $link = $m->plugin('DOM')->tree->links->[1];
+	$link->parentNode->removeChild($link);
+
+	is_deeply [
+		map {;
+			my $link = $_;
+			+{ map +($_ => $link->$_),
+				qw[ url text name tag attrs ] }
+		} $m->links
+	], [
+		{ url => 'one.html',
+		  text => 'Dis is link one.',
+		  name => 'link1',
+		  tag  => 'a',
+	#	  base => $base,
+		  attrs => {
+			name => 'link1', href => 'one.html', target => 'a',
+		  }, },
+		{ url => 'tri.html',
+		  text => 'Diss link three.',
+		  name => 'link3',
+		  tag  => 'a',
+	#	  base => $base,
+		  attrs => {
+			name => 'link3', href => 'tri.html', target => 'c',
+		  }, },
+	], '$mech->links after a modification to the document'
+	or require Data::Dumper, diag Data::Dumper::Dumper([
+		map {;
+			my $link = $_;
+			+{ map +($_ => $link->$_),
+				qw[ url text name tag attrs ] }
+		} $m->links
+	]);
+	
+}
+
+use tests 2; # Mech->images
+{
+	(my $m = new WWW::Mechanize)->use_plugin('DOM') ;
+	my $url = data_url <<'END';
+	  <title>A page</title><p>
+	    <img name=link1 src=one.html width=1 height=2 alt='Dis '>
+	    <input name=link2 src=two.html type=image width=3 height=4
+	      alt='a'>
+	    <img name=link3 src=tri.html width=6 height=87 alt='target=c>'>
+END
+	$m->get($url);
+#	my $base = $m->base;
+# ~~~ We can’t test base for now, because of a URI bug.
+	is_deeply [
+		map {;
+			my $img = $_;
+			+{ map +($_ => $img->$_),
+				qw[ url tag name height width alt ] }
+		} $m->images
+	], [
+		{ url => 'one.html',
+	#	  base => $base,
+		  tag  => 'img',
+		  name => 'link1',
+		  height => 2,
+		  width => 1,
+		  alt => 'Dis ', },
+		{ url => 'two.html',
+	#	  base => $base,
+		  tag  => 'input',
+		  name => 'link2',
+		  height => 4,
+		  width => 3,
+		  alt => 'a', },
+		{ url => 'tri.html',
+	#	  base => $base,
+		  tag  => 'img',
+		  name => 'link3',
+		  width => 6,
+		  height => 87,
+		  alt => 'target=c>', },
+	], '$mech->images'
+	or require Data::Dumper, diag Data::Dumper::Dumper([
+		map {;
+			my $img = $_;
+			+{ map +($_ => $img->$_),
+				qw[ url tag name height width alt ] }
+		} $m->images
+	]);
+
+	my $input = $m->plugin('DOM')->tree->find('input');
+	$input->parentNode->removeChild($input);
+
+	is_deeply [
+		map {;
+			my $img = $_;
+			+{ map +($_ => $img->$_),
+				qw[ url tag name height width alt ] }
+		} $m->images
+	], [
+		{ url => 'one.html',
+	#	  base => $base,
+		  tag  => 'img',
+		  name => 'link1',
+		  height => 2,
+		  width => 1,
+		  alt => 'Dis ', },
+		{ url => 'tri.html',
+	#	  base => $base,
+		  tag  => 'img',
+		  name => 'link3',
+		  width => 6,
+		  height => 87,
+		  alt => 'target=c>', },
+	], '$mech->images after a modification to the document'
+	or require Data::Dumper, diag Data::Dumper::Dumper([
+		map {;
+			my $img = $_;
+			+{ map +($_ => $img->$_),
+				qw[ url tag name height width alt ] }
+		} $m->images
+	]);
+}
+
+use tests 3; # script encodings
+{
+	my $script_content;
+	(my $m = new WWW::Mechanize)->use_plugin('DOM',
+		script_handlers => { default => sub {
+			$script_content = $_[2];
+		}}
+	) ;
+
+	my $script_url = data_url "\xfe\xfd";
+	$script_url->media_type(
+		'application/javascript;charset=iso-8859-7'
+	);
+	my $html_url = data_url <<"END";
+		<title>A page</title><script src='$script_url'></script><p>
+END
+	$m->get($html_url);
+	is $script_content, 'ώύ', 'script encoding in the HTTP headers';
+
+	$script_url->media_type('application/javascript');
+	$html_url = data_url <<"END";
+		<title>A page</title>
+			<script src='$script_url'></script><p>
+END
+	$html_url->media_type('text/html;charset=iso-8859-5');
+	$m->get($html_url);
+	is $script_content, 'ў§',
+		'script encoding inferred from the HTML page';
+
+	$html_url = data_url <<"END";
+		<title>A page</title>
+		  <script charset=iso-8859-4 src='$script_url'></script><p>
+END
+	$m->get($html_url);
+	is $script_content, 'ūũ',
+		'script encoding from explicit charset param';
+}
+
+use tests 1; # DOM tree ->charset
+{
+	(my $m = new WWW::Mechanize)->use_plugin('DOM') ;
+	my $url = data_url <<'END';
+		<title>A page</title><p>
+END
+	$url->media_type("text/html;charset=iso-8859-7");
+	$m->get($url);
+
+	is $m->plugin('DOM')->tree->charset, 'iso-8859-7',
+		'the plugin sets the DOM tree\'s charset attribute';
+}
+
+use tests 1; # get_content and !doctype
+{
+	(my $m = new WWW::Mechanize)->use_plugin('DOM') ;
+	my $url = data_url <<'END';
+		<!doctype html public "-//W3C//DTD HTML 4.01//EN">
+		<title>A page</title><p>
+END
+	$m->get($url);
+
+	like $m->content, qr/^<!doctype/,
+		'get_content includes the doctype (if there was one)';
+}
+
+use tests 19; # (i)frames
+{
+	my $script;
+	(my $m = new WWW::Mechanize)->use_plugin('DOM',
+		script_handlers => { default => sub {
+			$script = $_[2];
+		} }
+	) ;
+	my $frame_url = data_url <<'END';
+		<script>abcde</script>
+END
+	my $top_url = data_url <<END;
+		<iframe id=i src="$frame_url">
+END
+	$m->get($top_url);
+
+	my $w = $m->plugin("DOM")->window;
+
+	is $w->top, $w->window, 'top-level top refers to self';
+
+	is $script, 'abcde', 'scripts in iframes run';
+	is $w->{i},
+		(my $i = $w->document->getElementsByTagName('iframe')->[0])
+		  ->contentWindow,
+		'hash keys to access iframes';
+	is $w->frames->[0], $i->contentWindow, 'array access to iframes';
+	is $i->contentDocument,$w->[0]->document,'iframe->contentDocument';
+	is $w->[0], $w->frames->[0],
+		'window->[0] and frames->[0] are the same iframe';
+	isn't $w->frames->[0], $w,
+		'frames->[0] (the iframe) is not the top-level win';
+	isn't $w->document, $i->contentDocument,
+		"the iframe's doc is not the top window's doc";
+	is $w->[0]->top, $w, "iframe's top method returns the main window";
+	is $w->length, 1, 'window length when there is an iframe';
+
+
+	$script = '';
+	$top_url = data_url <<END;
+		<frame id=the_frame src="$frame_url">
+END
+	$m->get($top_url);
+
+	$w = $m->plugin("DOM")->window;
+	is $script, 'abcde', 'scripts in frames run';
+	is $w->{the_frame},
+		($i = $w->document->getElementsByTagName('frame')->[0])
+		  ->contentWindow,
+		'hash keys to access frames';
+	is $w->frames->[0], $i->contentWindow, 'array access to frames';
+	is $i->contentDocument,$w->[0]->document,'frame->contentDocument';
+	is $w->[0], $w->frames->[0],
+		'window->[0] and frames->[0] are the same frame';
+	isn't $w->frames->[0], $w,
+		'frames->[0] (the frame) is not the top-level window';
+	isn't $w->document, $i->contentDocument,
+		"the frame's doc is not the top window's doc";
+	is $w->[0]->top, $w, "frame's top method returns the main window";
+	is $w->length, 1, 'window length when there is a frame';
+}
+
+use tests 1; # document.location
+{
+	my $script;
+	(my $m = new WWW::Mechanize)->use_plugin('DOM') ;
+	$m->get(data_url '');
+	my $w = $m->plugin("DOM")->window;
+	is refaddr $w->document->location, refaddr $w->location,
+		'document->location';
+}
+
+use tests 1; # window->mech
+{
+	my $script;
+	my $w = (my $m = new WWW::Mechanize)->use_plugin('DOM')->window;
+	is $w->mech, $m, 'window->mech'	;
+	
 }

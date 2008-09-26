@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-require 5.006;
+BEGIN{ require 5.006; }
 use ExtUtils::MakeMaker;
 
 # I’m keeping these separate, in case these modules should ever be dis-
@@ -9,11 +9,12 @@ use ExtUtils::MakeMaker;
 	Carp                          => 0,
 	Encode                        => 0,
 	Hash::Util::FieldHash::Compat => 0,
-	HTML::DOM                     =>  .010, # content_offset
+	HTML::DOM                     =>  .021, # contentWindow
+	HTML::DOM::Collection         => 0,
 	HTML::DOM::Interface          =>  .019, # EventTarget
+	HTML::DOM::NodeList::Magic    =>  .020, # 2nd arg to new
 	HTML::DOM::View               =>  .018, # inside-out; writa-
 	HTTP::Headers::Util           => 0,     # ble document
-	LWP::Simple                   => 0, # temporary prerq
 	overload                      => 0,
 	Scalar::Util                  => 0,
 	strict                        => 0,
@@ -21,9 +22,10 @@ use ExtUtils::MakeMaker;
 	URI                           => 0,
 	warnings                      => 0,
 # for testing:
-	lib        => 0,
-	Test::More => 0,
-	URI::file  => 0,
+	lib         => 0,
+	Scalar'Util => 1.09, # refaddr
+	Test::More  => 0,
+	URI::file   => 0,
 );
 %js_prq = (
 	CSS::DOM::Interface  => 0,
@@ -47,7 +49,7 @@ use ExtUtils::MakeMaker;
 	Scalar::Util                  => 0,     # unwrap option
 	strict                        => 0,
 	warnings                      => 0,
-#	WWW::Mechanize::Plugin::DOM   =>  .005, # Window
+#	WWW::Mechanize::Plugin::DOM   =>  .007, # top
 # for testing:
 	lib        => 0,
 	Test::More => 0,

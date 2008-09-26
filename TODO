@@ -1,10 +1,9 @@
 
-finish adding mech callback routines
-write tests
-finish adding browser-only js features (i.e., non-DOM stuff like navigator, window properties/methods and whatever else)
-frames
+finish adding mech callback routines (follow_link, back, forward, get_uri)
+write a complete test suite
+finish adding browser-only js features (navigator, window properties/methods and whatever else)
+check recursive frames
 multiple windows
-make AbstractViews work (window == window.document.defaultView)
 revisit the event handler scope chain; make sure it has everything it's supposed to; document it
 add support for HTML::DOM’s utf-16 methods.
 have a look at the HTML 5 spec which is supposed to have something about the Window object

@@ -1,5 +1,38 @@
 Revision history for WWW::Mechanize::Plugin::JavaScript and ::DOM
 
+0.006   25 September, 2008
+        The DOM plugin (0.007):
+        • The window object is now part of the event dispatch chain.
+        • The window method no longer dies when the page is not
+          HTML. As a result, you can now run JS code without an
+          HTML document.
+        • When a link in the DOM is clicked (via trigger_event or the
+          click method), it now goes to another page.
+        • It now provides Mech with handlers for extracting links and
+          images from the DOM.
+        • Scripts are properly decoded and are no longer always
+          treated as Latin 1.
+        • The DOM tree’s charset attribute is now set.
+        • The scripts_enabled method now disables event handlers as
+          well as <script>s.
+        • !doctype declarations are no longer dropped from the HTML
+	  returned by Mech’s ‘content’ method.
+        • Frames (including inline frames) are now supported. The win-
+          dow object now has its ‘top’,  ‘frames’ and  ‘length’  meth-
+          ods; and you can use it as a hash or array to access frames.
+        • The document object now has its location object set. This
+          was broken in 0.005. (Thanks to David Williams for noticing
+          the bug.)
+        The JavaScript plugin:
+        • You can now specify custom functions for alert, etc., even
+          after the JS environment has been created.
+        JE back end:
+        • Methods returning window objects now work  properly  instead
+          of returning weird objects that die when you so much as look
+          at them.
+        • The global object can now be used as an array or hash to
+          access frames.
+
 0.005a  7 September, 2008
         The DOM plugin (0.006):
         • The  window  object’s  *_function  methods  (alert_function,

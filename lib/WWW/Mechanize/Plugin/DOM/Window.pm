@@ -2,10 +2,11 @@ package WWW::Mechanize::Plugin::DOM::Window;
 
 use strict; use warnings; no warnings qw 'utf8 parenthesis';
 
-our $VERSION = '0.006';
+our $VERSION = '0.007';
 
 use Hash::Util::FieldHash::Compat 'fieldhash';
 use HTML::DOM::Interface 0.019 ':all';
+use HTML::DOM::NodeList::Magic;
 use HTML::DOM::View 0.018;
 use Scalar::Util 'weaken';
 use Time::HiRes 'time';
@@ -16,9 +17,11 @@ our @ISA = qw[ HTML::DOM::View
 no constant 1.03 ();
 use constant::lexical +{ do {
 	my $x; map +($_=>$x++), qw[
-		lert cnfm prmp loco mech
-	]
+		lert cnfm prmp loco meck topp frms
+	]  # we use ‘meck’ so as not to conflict with the method
 }};
+
+use overload fallback=>1, (qw/@{} %{}/, ('_frames_collection')x2)[0,3,1,2];
 
 fieldhash my %timeouts; # keyed by document
 fieldhash my %navi;     # keyed by mech
@@ -40,12 +43,15 @@ our %Interface = (
 	window => OBJ|READONLY,
 	self => OBJ|READONLY,
 	navigator => OBJ|READONLY,
+	top => OBJ|READONLY,
+	frames => OBJ|READONLY,
+	length => NUM|READONLY,
 );
 
 sub new {
-	my $self = bless[], shift;
-	weaken($self->[mech] = my $mech = shift);
-	$self->[loco] = ('WWW::Mechanize::Plugin::DOM::Location')->new(
+	my $self = bless\[], shift;
+	weaken($$self->[meck] = my $mech = shift);
+	$$self->[loco] = ('WWW::Mechanize::Plugin::DOM::Location')->new(
 				$mech
 			);
 	$self;
@@ -53,33 +59,33 @@ sub new {
 
 sub alert {
 	my $self = shift;
-	&{$self->[lert]||sub{print @_,"\n";()}}(@_);
+	&{$$self->[lert]||sub{print @_,"\n";()}}(@_);
 }
 sub confirm {
 	my $self = shift;
-	($self->[cnfm]||$self->[mech]->die(
+	($$self->[cnfm]||$$self->[meck]->die(
 		"There is no default confirm function"
 	 ))->(@_)
 }
 sub prompt {
 	my $self = shift;
-	($self->[prmp]||$self->[mech]->die(
+	($$self->[prmp]||$$self->[meck]->die(
 		"There is no default prompt function"
 	 ))->(@_)
 }
 
-sub set_alert_function   { $_[0][lert]     = $_[1]; }
-sub set_confirm_function { $_[0][cnfm] = $_[1]; }
-sub set_prompt_function  { $_[0][prmp] = $_[1]; }
+sub set_alert_function   { $${$_[0]}[lert]     = $_[1]; }
+sub set_confirm_function { $${$_[0]}[cnfm] = $_[1]; }
+sub set_prompt_function  { $${$_[0]}[prmp] = $_[1]; }
 
 sub location {
 	my $self = shift;
-	$self->[loco]->href(@_) if @_;
-	$self->[loco];
+	$$self->[loco]->href(@_) if @_;
+	$$self->[loco];
 }
 
 sub navigator {
-	my $mech = shift->[mech];
+	my $mech = ${+shift}->[meck];
 	$navi{$mech} ||=
 		new WWW::Mechanize::Plugin::DOM::Navigator:: $mech;
 }
@@ -101,7 +107,7 @@ sub clearTimeout {
 }
 
 sub open {
-	shift->[mech]->get(shift);
+	${+shift}->[meck]->get(shift);
 			# ~~~ Just a placeholder for now.
 	return;
 }
@@ -117,7 +123,7 @@ sub _check_timeouts {
 	for my $id(0..$#$t_o) {
 		next unless $_ = $$t_o[$id];
 		$$_[0] <= $time and
-			($self->[mech]->plugin('JavaScript')||return)
+			($$self->[meck]->plugin('JavaScript')||return)
 				->eval($$_[1]),
 			delete $$t_o[$id];
 	}
@@ -125,7 +131,43 @@ sub _check_timeouts {
 }
 
 sub window { $_[0] }
-*self = *window;
+*self = *frames = *window;
+sub length { $_[0]->_frames_collection->length }
+
+sub top {
+	my $self = shift;
+	$$self->[topp] || $self;
+}
+
+sub _set_top { ${$_[0]}->[topp] = $_[1] }
+
+sub event_listeners_enabled {
+	${+shift}->[meck]->plugin("DOM")->scripts_enabled
+}
+
+sub _frames_collection {
+	my $self = shift;
+	$$self->[frms] ||= do{
+		my $doc = $self->document;
+		WWW::Mechanize::Plugin::DOM::Frames->new(
+		HTML::DOM::NodeList::Magic->new(
+		    sub { $doc->look_down(_tag => qr/^i?frame\z/) },
+		    $doc
+		))
+	}
+}
+
+# ~~~ Will we need this?
+#sub _reset_frames_collection { delete ${+shift}->[frms] }
+
+sub document {
+	my $self = shift;
+	@_ || return $self->SUPER::document;
+	delete $$self->[frms];
+	$self->SUPER::document(@_);
+}
+
+sub mech { $${+shift}[meck] }
 
 
 package WWW::Mechanize::Plugin::DOM::Location;
@@ -134,7 +176,7 @@ use URI;
 use HTML::DOM::Interface qw'STR METHOD VOID';
 use Scalar::Util 'weaken';
 
-our $VERSION = '0.006';
+our $VERSION = '0.007';
 
 use overload fallback => 1, '""' => sub{${+shift}->uri};
 
@@ -269,7 +311,7 @@ package WWW::Mechanize::Plugin::DOM::Navigator;
 use HTML::DOM::Interface qw'STR READONLY';
 use Scalar::Util 'weaken';
 
-our $VERSION = '0.006';
+our $VERSION = '0.007';
 
 $$_{~~__PACKAGE__} = 'Navigator',
 $$_{Navigator} = {
@@ -302,6 +344,24 @@ sub userAgent {
 }
 
 
+# ~~~ This is horribly inefficient and clunky. It probably needs to be
+#     programmed in full here, or at least the ‘Collection’ part (a tiny
+#     bit of copy&paste).
+package WWW::Mechanize::Plugin::DOM::Frames;
+
+our $VERSION = '0.007';
+
+use HTML::DOM::Collection;
+our @ISA = "HTML::DOM::Collection";
+
+use overload fallback => 1,'@{}' => sub {
+	[map $_->contentWindow, @{shift->${\'SUPER::(@{}'}}]
+};
+
+sub FETCH { (shift->SUPER::FETCH(@_)||return)->contentWindow }
+
+
+
 # ------------------ DOCS --------------------#
 
 1;
@@ -313,7 +373,7 @@ WWW::Mechanize::Plugin::DOM::Window - Window object for the DOM plugin
 
 =head1 VERSION
 
-Version 0.006
+Version 0.007
 
 =head1 DESCRIPTION
 
@@ -375,6 +435,10 @@ is equivalent to C<< ->location('foo') >>.
 
 These two return the window object itself.
 
+=item mech
+
+This returns the L<WWW::Mechanize> object that corresponds to the window.
+
 =back
 
 =head1 THE C<%Interface> HASH
@@ -388,6 +452,8 @@ hashes I<within> L<%HTML::DOM::Interface|HTML::DOM::Interface>, like this:
       confirm => BOOL|METHOD,
       ...
   )
+
+It does not include C<mech>.
 
 =head1 SEE ALSO
 

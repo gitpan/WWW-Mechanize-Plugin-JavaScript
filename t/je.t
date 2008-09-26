@@ -75,4 +75,25 @@ use tests 4; # null DOMString
 		'any --> string conversion when getting a DOMString prop');
 }
 
+use tests 2; # window wrappers
+{
+	ok $js->eval('window === top'),
+		'windows are wrapped up in global objects';
+	ok $js->eval('window === document.defaultView'),
+		'window === document.defaultView';
+}
 
+use tests 3; # frames
+{
+	$js->eval(q|
+		document.write("<iframe id=i src='data:text/html,'>")
+		document.close()
+	|);
+	ok $js->eval('frames[0] && "document" in frames[0] &&
+			frames[0].document.defaultView == frames[0]'),
+		'frame access by array index', or diag $@;
+	ok $js->eval('frames.i && "document" in frames.i'),
+		'frame access by name';
+	ok $js->eval('frames.i === frames[0]'),
+		'the two methods return the same object';
+}

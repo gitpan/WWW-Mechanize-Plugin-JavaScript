@@ -117,7 +117,7 @@ diag $@ if $@;
 	is $m->uri, $uri, '  and do not affect the page stack';
 }
 
-use tests 1; # custom functions for alert, etc.
+use tests 2; # custom functions for alert, etc.
 {
 	my $which = '';
 	(my $m = new WWW::Mechanize)->use_plugin('JavaScript',
@@ -132,4 +132,24 @@ use tests 1; # custom functions for alert, etc.
 	');
 	is $which , 'alert(foo)confirm(bar)prompt(baz)',
 		'custom alert, etc.';
+
+	$which = '';
+	$m->plugin('JavaScript')->options(
+		alert => sub { $which .= "sleepy($_[0])" },
+		confirm => sub { $which .= "deny($_[0])" },
+		prompt => sub { $which .= "tardy($_[0])" }
+	);
+	$m->plugin("JavaScript")->eval('
+		alert("foo"), confirm("bar"), prompt("baz")
+	');
+	is $which , 'sleepy(foo)deny(bar)tardy(baz)',
+	  'resetting custom alert, etc., after the JS env is created';
 }
+
+use tests 1; # non-HTML pages
+{
+	is eval{(my $m = new WWW::Mechanize)->use_plugin('JavaScript')
+	         ->eval("35")}, 35,
+	  'JS is available even when the page is not HTML';
+}
+

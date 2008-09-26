@@ -8,7 +8,7 @@ use Scalar::Util qw'weaken';
 use URI::Escape 'uri_unescape';
 no WWW::Mechanize ();
 
-our $VERSION = '0.005';
+our $VERSION = '0.006';
 
 # Attribute constants (array indices)
 sub mech() { 0 }
@@ -99,6 +99,7 @@ sub options {
 	my $self = shift;
 	my %opts = @_;
 
+	my $w;
 	for(keys %opts) {
 		if($_ eq 'engine') {
 			if($self->[jsbe] &&
@@ -112,13 +113,16 @@ sub options {
 			$self->[benm] = $opts{$_};;
 		}
 		elsif($_ eq 'alert') {
-			$self->[alert] = $opts{$_};
+			($w ||= $self->[mech]->plugin('DOM')->window)
+				->set_alert_function($opts{$_});
 		}
 		elsif($_ eq 'confirm') {
-			$self->[confirm] = $opts{$_};
+			($w ||= $self->[mech]->plugin('DOM')->window)
+				->set_confirm_function($opts{$_});
 		}
 		elsif($_ eq 'prompt') {
-			$self->[prompt] = $opts{$_};
+			($w ||= $self->[mech]->plugin('DOM')->window)
+				->set_prompt_function($opts{$_});
 		}
 		elsif($_ eq 'init') {
 			$self->[init_cb] = $opts{$_};
@@ -164,9 +168,6 @@ sub _start_engine {
 			$_->bind_classes($__)
 		}
 		$_->set(document => $self->[mech]->plugin('DOM')->tree);
-		{ $w->set_alert_function  ($$self[alert]   || next) }
-		{ $w->set_confirm_function($$self[confirm] || next) }
-		{ $w->set_prompt_function ($$self[prompt ] || next) }
 
 		$_->set('screen', {});
 			# ~~~ This doesn’t belong here. I need to get a
@@ -215,15 +216,7 @@ WWW::Mechanize::Plugin::JavaScript - JavaScript plugin for WWW::Mechanize
 
 =head1 VERSION
 
-Version 0.005
-
-B<WARNING:> This is an alpha release. The API is subject to change 
-without
-notice.
-
-This set of modules is at a very early stage. Only a few features have
-been implemented so far. Whether it will work for a particular case is
-hard to say. Try it and see. (And patches are always welcome.)
+Version 0.006 (alpha)
 
 =head1 SYNOPSIS
 
@@ -385,8 +378,7 @@ L<C<%WWW::Mechanize::Plugin::DOM::Window::Interface>|WWW::Mechanize::Plugin::DOM
 mouthful, isn't it). When the window object is passed to the JavaScript environment, the global
 object must be returned instead.
 
-This method can optionally create C<window> and 
-C<self>
+This method can optionally create C<window>, C<self> and C<frames>
 properties
 that refer to the global object, but this is not necessary. It might make
 things a little more efficient.
@@ -457,7 +449,8 @@ JE 0.022 or later (when there is a SpiderMonkey binding available it will
 become optional)
 
 The experimental version of WWW::Mechanize available at
-L<http://www-mechanize.googlecode.com/svn/wm/branches/plugins/>
+L<http://www-mechanize.googlecode.com/svn/wm/branches/plugins/>, revision
+497 or higher
 
 CSS::DOM
 
@@ -466,8 +459,8 @@ CSS::DOM
 (See also L<WWW::Mechanize::Plugin::DOM/Bugs> and 
 L<WWW::Mechanize::Plugin::JavaScript::JE/Bugs>.)
 
-Currently, you'll get rather obtuse errors if you call the C<eval> method
-when the current page is not HTML.
+There is currently no system in place for preventing pages from different
+sites from communicating with each other.
 
 To report bugs, please e-mail the author.
 

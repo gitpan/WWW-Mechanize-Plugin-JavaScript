@@ -1,4 +1,5 @@
 Changes
+HACKING
 lib/WWW/Mechanize/Plugin/DOM.pm
 lib/WWW/Mechanize/Plugin/DOM/Location.pod
 lib/WWW/Mechanize/Plugin/DOM/Window.pm
