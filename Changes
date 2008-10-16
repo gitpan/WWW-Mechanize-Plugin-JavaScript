@@ -1,5 +1,11 @@
 Revision history for WWW::Mechanize::Plugin::JavaScript and ::DOM
 
+0.007   15 October, 2008
+        The DOM plugin (0.008):
+        • Modifications to comply with recent changes to LWP and Mech.
+        The JavaScript plugin:
+        • Likewise
+
 0.006   25 September, 2008
         The DOM plugin (0.007):
         • The window object is now part of the event dispatch chain.

@@ -114,7 +114,8 @@ use tests 2; # javascript:
 	$m->get("Javascript:%20foo=%22ba%ca%80%22");
 	is $js->eval('foo'), 'baʀ', 'javascript: URLs are executed';
 diag $@ if $@;
-	is $m->uri, $uri, '  and do not affect the page stack';
+	is $m->uri, $uri, '  and do not affect the page stack'
+		or diag $m->response->as_string;
 }
 
 use tests 2; # custom functions for alert, etc.

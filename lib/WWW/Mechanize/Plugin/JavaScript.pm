@@ -8,7 +8,7 @@ use Scalar::Util qw'weaken';
 use URI::Escape 'uri_unescape';
 no WWW::Mechanize ();
 
-our $VERSION = '0.006';
+our $VERSION = '0.007';
 
 # Attribute constants (array indices)
 sub mech() { 0 }
@@ -80,15 +80,14 @@ sub init { # expected to return a plugin object that the mech object will
 		},
 	);
 
-	$mech->add_handler(modify_request => sub {
-		(my $url = $_[1]->uri)->scheme eq 'javascript'
-			or return;
-		shift->plugin('JavaScript')->eval(
-			decode_utf8 uri_unescape opaque $url
+	$mech->set_my_handler(request_preprepare => sub {
+		my($request,$mech) = @_;
+		$mech->plugin('JavaScript')->eval(
+			decode_utf8 uri_unescape opaque {uri $request}
 		);
 		$@ and $mech->warn($@);
 		WWW'Mechanize'abort;
-	});
+	}, m_scheme => 'javascript');
 
 	weaken $mech; # stop closures from preventing destruction
 
@@ -216,7 +215,7 @@ WWW::Mechanize::Plugin::JavaScript - JavaScript plugin for WWW::Mechanize
 
 =head1 VERSION
 
-Version 0.006 (alpha)
+Version 0.007 (alpha)
 
 =head1 SYNOPSIS
 
@@ -450,7 +449,7 @@ become optional)
 
 The experimental version of WWW::Mechanize available at
 L<http://www-mechanize.googlecode.com/svn/wm/branches/plugins/>, revision
-497 or higher
+506 or higher
 
 CSS::DOM
 

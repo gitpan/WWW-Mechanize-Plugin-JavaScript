@@ -4,7 +4,7 @@ package WWW::Mechanize::Plugin::DOM;
 # languages may use DOM as well. Anyone have time to implement Acme::Chef
 # bindings for Mech? :-)
 
-$VERSION = '0.007';
+$VERSION = '0.008';
 
 use 5.006;
 
@@ -36,40 +36,45 @@ sub init { # expected to return a plugin object that the mech object will
 	}, $package;
 	weaken $self->{mech};
 
-	$mech->add_handler(
+	$mech->set_my_handler(
 		parse_html => \&_parse_html
 	);
-	$mech->add_handler( get_content =>
+	$mech->set_my_handler( get_content =>
 	    sub {
+		shift;
 	        my $mech = shift;
-	        $mech->is_html or WWW::Mechanize::next_handler;
+	        $mech->is_html or return;
 	        my $stuff = (my $self = $mech->plugin('DOM'))
 	            ->tree->innerHTML;
 	        defined $$self{charset} ? encode $$self{charset}, $stuff :
 			$stuff;
 	    }
 	);
-	$mech->add_handler( get_text_content =>
+	$mech->set_my_handler( get_text_content =>
 	    sub {
+		shift;
 	        my $mech = shift;
-	        $mech->is_html or WWW::Mechanize::next_handler;
+	        $mech->is_html or return;
 	        my $stuff = (my $self = $mech->plugin('DOM'))
 	            ->tree->documentElement->as_text;
 	        defined $$self{charset} ? encode $$self{charset}, $stuff :
 			$stuff;
 	    }
 	);
-	$mech->add_handler( extract_forms =>
+	$mech->set_my_handler( extract_forms =>
 		sub {
+			shift;
 			shift->plugin('DOM')->tree->forms
 		}
 	);
-	$mech->add_handler( extract_links => sub {
+	$mech->set_my_handler( extract_links => sub {
+		shift;
 		tie my @links, WWW'Mechanize'Plugin'DOM'Links:: =>
 			scalar shift->plugin('DOM')->tree->links
 		;\@links;
 	});
-	$mech->add_handler( extract_images => sub {
+	$mech->set_my_handler( extract_images => sub {
+		shift;
 		my $doc = shift->plugin('DOM')->tree;
 		my $list = HTML::DOM::NodeList::Magic->new(
 		    sub { grep tag $_ =~ /^i(?:mg|nput)\z/,
@@ -85,7 +90,7 @@ sub init { # expected to return a plugin object that the mech object will
 }
 
 sub _parse_html {
-	my ($mech,$src) = @_;
+	my (undef,$mech,undef,$src) = @_;
 	weaken $mech;
 	my $self = $mech->plugin('DOM');
 	weaken $self;
@@ -337,7 +342,7 @@ sub check_timers {
 
 package WWW::Mechanize::Plugin::DOM::Links;
 
-our$ VERSION = '0.007';
+our$ VERSION = '0.008';
 
 use WWW::Mechanize::Link;
 
@@ -362,7 +367,7 @@ sub EXISTS    { exists ${$_[0]}->links->[$_[1]] }
 
 package WWW::Mechanize::Plugin::DOM::Images;
 
-our$ VERSION = '0.007';
+our$ VERSION = '0.008';
 
 use WWW::Mechanize::Image;
 
@@ -392,7 +397,7 @@ WWW::Mechanize::Plugin::DOM - HTML Document Object Model plugin for Mech
 
 =head1 VERSION
 
-0.007 (alpha)
+0.008 (alpha)
 
 =head1 SYNOPSIS
 

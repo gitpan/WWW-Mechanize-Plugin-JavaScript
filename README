@@ -1,17 +1,21 @@
-WWW-Mechanize-Plugin-JavaScript-0.006 (alpha)
+WWW-Mechanize-Plugin-JavaScript-0.007 (alpha)
 
 Plugins for WWW::Mechanize that provide HTML DOM and Java-
 Script support.
 
 This distribution contains:
-• WWW::Mechanize::Plugin::DOM            0.007
-• WWW::Mechanize::Plugin::JavaScript     0.006
+• WWW::Mechanize::Plugin::DOM            0.008
+• WWW::Mechanize::Plugin::JavaScript     0.007
 • WWW::Mechanize::Plugin::JavaScript::JE 0.006
 
 
 RECENT CHANGES
 
 (See the Changes file for the long version.)
+
+0.007
+-----
+• Modifications to comply with recent LWP and Mech changes
 
 0.006
 -----
@@ -41,18 +45,6 @@ Two bug fixes:
   which were broken in the previous release, work again.
 • Properties and methods that are supposed to return DOMStrings can
   now return  null.  They used to  return  the  string  ‘undefined’.
-
-0.005
------
-Four new features (see the Changes file for more detail):
-• New scripts_enabled method (DOM plugin) for enabling/disa-
-  bling scripts.
-• Support for javascript: URLs
-• The window object has been disentangled from the JavaScript plugin
-  and moved to the DOM plugin.  It is now accessible  via  the  ‘win-
-  dow’ method. This has allowed the fourth feature:
-• The window object now inherits from HTML::DOM::EventTarget, which
-  provides addEventListener, etc.
 
 
 INSTALLATION
@@ -84,7 +76,7 @@ This module requires:
 
 - The experimental  version  of  WWW::Mechanize  available  at
   http://www-mechanize.googlecode.com/svn/wm/branches/plugins/,
-  revision 497 or higher
+  revision 506 or higher
 
 - CSS::DOM
 

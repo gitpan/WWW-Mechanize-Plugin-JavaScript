@@ -64,10 +64,11 @@ for(\(%dom_prq, %js_prq, %je_prq)) {
 }
 
 eval{require WWW::Mechanize}
-	&& WWW::Mechanize->can('use_plugin')
+	&& exists &WWW::Mechanize::abort
+	&& !exists &WWW::Mechanize::next_handler
 or $prq{WWW::Mechanize} = 9999, print <<, "\n" ;
 This module requires the experimental version of WWW::Mechanize that
-is to be found at the following URL:
+is to be found at the following URL (revision 506 or higher):
 http://www-mechanize.googlecode.com/svn/wm/branches/plugins/
 
 WriteMakefile(

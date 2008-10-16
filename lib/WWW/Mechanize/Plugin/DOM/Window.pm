@@ -2,7 +2,7 @@ package WWW::Mechanize::Plugin::DOM::Window;
 
 use strict; use warnings; no warnings qw 'utf8 parenthesis';
 
-our $VERSION = '0.007';
+our $VERSION = '0.008';
 
 use Hash::Util::FieldHash::Compat 'fieldhash';
 use HTML::DOM::Interface 0.019 ':all';
@@ -176,7 +176,7 @@ use URI;
 use HTML::DOM::Interface qw'STR METHOD VOID';
 use Scalar::Util 'weaken';
 
-our $VERSION = '0.007';
+our $VERSION = '0.008';
 
 use overload fallback => 1, '""' => sub{${+shift}->uri};
 
@@ -311,7 +311,7 @@ package WWW::Mechanize::Plugin::DOM::Navigator;
 use HTML::DOM::Interface qw'STR READONLY';
 use Scalar::Util 'weaken';
 
-our $VERSION = '0.007';
+our $VERSION = '0.008';
 
 $$_{~~__PACKAGE__} = 'Navigator',
 $$_{Navigator} = {
@@ -349,7 +349,7 @@ sub userAgent {
 #     bit of copy&paste).
 package WWW::Mechanize::Plugin::DOM::Frames;
 
-our $VERSION = '0.007';
+our $VERSION = '0.008';
 
 use HTML::DOM::Collection;
 our @ISA = "HTML::DOM::Collection";
@@ -373,7 +373,7 @@ WWW::Mechanize::Plugin::DOM::Window - Window object for the DOM plugin
 
 =head1 VERSION
 
-Version 0.007
+Version 0.008
 
 =head1 DESCRIPTION
 
