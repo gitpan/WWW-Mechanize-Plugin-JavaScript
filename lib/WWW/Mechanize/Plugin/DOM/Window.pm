@@ -2,7 +2,7 @@ package WWW::Mechanize::Plugin::DOM::Window;
 
 use strict; use warnings; no warnings qw 'utf8 parenthesis';
 
-our $VERSION = '0.008';
+our $VERSION = '0.009';
 
 use Hash::Util::FieldHash::Compat 'fieldhash';
 use HTML::DOM::Interface 0.019 ':all';
@@ -29,7 +29,7 @@ fieldhash my %navi;     # keyed by mech
 # This does not follow the same format as %HTML::DOM::Interface; this cor-
 # responds to the format of hashes *within* %H:D:I. The other format does
 # not apply here, since we can’t bind the class like other classes. This
-# needs to be bound to the global object.
+# needs to be bound to the global  object  (at  least  in  JavaScript).
 our %Interface = (
 	%{$HTML::DOM::Interface{AbstractView}},
 	%{$HTML::DOM::Interface{EventTarget}},
@@ -176,7 +176,7 @@ use URI;
 use HTML::DOM::Interface qw'STR METHOD VOID';
 use Scalar::Util 'weaken';
 
-our $VERSION = '0.008';
+our $VERSION = '0.009';
 
 use overload fallback => 1, '""' => sub{${+shift}->uri};
 
@@ -205,13 +205,13 @@ sub new { # usage: new .....::Location $uri, $mech
 sub hash {
 	my $loc = shift;
 	my $old = (my $uri = $$loc->uri)->fragment;
-	$old = "#$old" unless !length $uri and $uri !~ /#\z/;
+	$old = "#$old" if defined $old;
 	if (@_){
 		shift() =~ /#?(.*)/s;
 		(my $uri_copy = $uri->clone)->fragment($1);
 		$uri_copy->eq($uri) or $$loc->get($uri);
 	}
-	$old
+	$old||''
 }
 
 sub host {
@@ -311,7 +311,7 @@ package WWW::Mechanize::Plugin::DOM::Navigator;
 use HTML::DOM::Interface qw'STR READONLY';
 use Scalar::Util 'weaken';
 
-our $VERSION = '0.008';
+our $VERSION = '0.009';
 
 $$_{~~__PACKAGE__} = 'Navigator',
 $$_{Navigator} = {
@@ -349,7 +349,7 @@ sub userAgent {
 #     bit of copy&paste).
 package WWW::Mechanize::Plugin::DOM::Frames;
 
-our $VERSION = '0.008';
+our $VERSION = '0.009';
 
 use HTML::DOM::Collection;
 our @ISA = "HTML::DOM::Collection";
@@ -373,7 +373,7 @@ WWW::Mechanize::Plugin::DOM::Window - Window object for the DOM plugin
 
 =head1 VERSION
 
-Version 0.008
+Version 0.009
 
 =head1 DESCRIPTION
 

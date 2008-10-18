@@ -544,7 +544,6 @@ END
 
 use tests 1; # document.location
 {
-	my $script;
 	(my $m = new WWW::Mechanize)->use_plugin('DOM') ;
 	$m->get(data_url '');
 	my $w = $m->plugin("DOM")->window;
@@ -554,8 +553,23 @@ use tests 1; # document.location
 
 use tests 1; # window->mech
 {
-	my $script;
 	my $w = (my $m = new WWW::Mechanize)->use_plugin('DOM')->window;
 	is $w->mech, $m, 'window->mech'	;
+	
+}
+
+use tests 3; # location->hash
+{
+# This just tests a bug fixed in 0.009. We still need tests for setting the
+# hash (and all other location properties).
+	my $script;
+	my $l = (my $m = new WWW::Mechanize)->use_plugin('DOM')
+		->window->location;
+	$m->get('data:text/html,');
+	is $l->hash, '', 'location->hash when there is no fragment';
+	$m->get('data:text/html,#');
+	is $l->hash, '#', 'location->hash when URL ends in #';
+	$m->get('data:text/html,#fetvov');
+	is $l->hash, '#fetvov','location->hash when URL ends with #...';
 	
 }

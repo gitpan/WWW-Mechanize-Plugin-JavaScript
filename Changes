@@ -1,5 +1,9 @@
 Revision history for WWW::Mechanize::Plugin::JavaScript and ::DOM
 
+0.007a  18 October, 2008
+        The DOM plugin (0.009):
+        • The location object’s hash method now returns an empty string when there is no fragment, instead of ‘#’ (with warnings).
+
 0.007   15 October, 2008
         The DOM plugin (0.008):
         • Modifications to comply with recent changes to LWP and Mech.

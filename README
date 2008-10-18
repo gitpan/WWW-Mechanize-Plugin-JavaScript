@@ -1,10 +1,10 @@
-WWW-Mechanize-Plugin-JavaScript-0.007 (alpha)
+WWW-Mechanize-Plugin-JavaScript-0.007a (alpha)
 
 Plugins for WWW::Mechanize that provide HTML DOM and Java-
 Script support.
 
 This distribution contains:
-• WWW::Mechanize::Plugin::DOM            0.008
+• WWW::Mechanize::Plugin::DOM            0.009
 • WWW::Mechanize::Plugin::JavaScript     0.007
 • WWW::Mechanize::Plugin::JavaScript::JE 0.006
 
@@ -12,6 +12,11 @@ This distribution contains:
 RECENT CHANGES
 
 (See the Changes file for the long version.)
+
+0.007a
+------
+• The  location  object’s  hash  method now returns an  empty  string
+  instead of ‘#’ when there is no URL fragment.
 
 0.007
 -----
