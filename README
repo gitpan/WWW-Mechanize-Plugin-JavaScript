@@ -1,17 +1,29 @@
-WWW-Mechanize-Plugin-JavaScript-0.007a (alpha)
+WWW-Mechanize-Plugin-JavaScript-0.008 (alpha)
 
 Plugins for WWW::Mechanize that provide HTML DOM and Java-
 Script support.
 
 This distribution contains:
-• WWW::Mechanize::Plugin::DOM            0.009
-• WWW::Mechanize::Plugin::JavaScript     0.007
-• WWW::Mechanize::Plugin::JavaScript::JE 0.006
+• WWW::Mechanize::Plugin::DOM            0.010
+• WWW::Mechanize::Plugin::JavaScript     0.008
+• WWW::Mechanize::Plugin::JavaScript::JE 0.007
 
 
 RECENT CHANGES
 
 (See the Changes file for the long version.)
+
+0.008
+-----
+• Scripts that are sent with  a  transfer  encoding  (such  as  gzip)
+  now work.
+• navigator.appVersion
+• $dom_plugin->count_timers
+• check_timeouts has been removed from the JavaScript plugin.
+•‘var x;’ now creates the global var instead of being a no-op.
+• Event handlers in an event attribute of a <form>  element no longer
+  die when variables are named.  (Thanks to  Imre  Rad  for  alerting
+  me to this.)
 
 0.007a
 ------
@@ -21,35 +33,6 @@ RECENT CHANGES
 0.007
 -----
 • Modifications to comply with recent LWP and Mech changes
-
-0.006
------
-• Support for (i)frames
-• The window object is now part of the event dispatch chain.
-• You can now run JS code without an HTML document.
-• When a link in the DOM is clicked (via trigger_event or the click
-  method), it now goes to another page.
-• Mech’s link- and image-related methods now extract info
-  from the DOM.
-• Scripts are properly decoded and are no longer always treated
-  as Latin 1.
-• The DOM tree’s charset attribute is now set.
-• The scripts_enabled method now disables event handlers as well as
-  <script>s.
-• You can now specify custom functions for alert, etc., via the JS
-  plugin even after the JS environment has been created.
-• !doctype declarations are no longer dropped from the HTML returned
-  by Mech’s ‘content’ method.
-• The document object now has its location object set. (Thanks to
-  David Williams for spotting this.)
-
-0.005a
-------
-Two bug fixes:
-• The alert, confirm and prompt options to the JavaScript plugin,
-  which were broken in the previous release, work again.
-• Properties and methods that are supposed to return DOMStrings can
-  now return  null.  They used to  return  the  string  ‘undefined’.
 
 
 INSTALLATION

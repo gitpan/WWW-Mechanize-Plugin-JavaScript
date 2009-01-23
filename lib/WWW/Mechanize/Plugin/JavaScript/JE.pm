@@ -10,7 +10,7 @@ use JE 0.022;
 use Scalar::Util qw'weaken';
 use WWW::Mechanize::Plugin::DOM;
 
-our $VERSION = '0.006';
+our $VERSION = '0.007';
 our @ISA = 'JE';
 
 fieldhash my %parathia;
@@ -137,12 +137,11 @@ sub prop {
 
 	my $window = $parathia{$self};
 
-	if($name =~ /^(?:0|[1-9]\d*)\z/ and $name < 4294967295) {
-		return $self->upgrade($window->[$name]);
-	}
-	else {
-		return $self->upgrade($window->{$name});
-	}
+	my $ret =
+		$name =~ /^(?:0|[1-9]\d*)\z/ && $name < 4294967295
+        	? $window->[$name]
+		: $window->{$name};
+	defined $ret ? $self->upgrade($ret) : $ret;
 }
 
 sub set {
@@ -228,11 +227,17 @@ sub event2sub {
 	# gle-line comment at the end,  and no line break.  ("foo //bar"
 	# would fail without  this,  because  the  })  would  be  com-
 	# mented out too.)
+	# We have to check whether the $elem is a form before calling it’s
+	#‘form’  method,  because forms *do*  have such a method,  but it
+	# returns a list of form element names and values, which is *not*
+	# what we  want.  (We  want  the  element’s  parent  form  where
+	# applicable.)
 	my $func =
 		($w->compile("(function(){ $code\n })",$url,$line)||die $@)
 		->execute($w, bless [
 			$w,
-			$elem->can('form') ? $w->upgrade($elem->form) : (),
+			$elem->tag ne 'form' && $elem->can('form')
+			  ? $w->upgrade($elem->form) : (),
 			my $wrapper=($w->upgrade($elem))
 		], 'JE::Scope');
 
@@ -282,7 +287,7 @@ WWW::Mechanize::Plugin::JavaScript::JE - JE backend for WMPJS
 
 =head1 VERSION
 
-0.005 (alpha)
+0.007 (alpha)
 
 =head1 DESCRIPTION
 

@@ -14,6 +14,7 @@ t/dom-onload.html
 t/dom-require.t
 t/dom-test-script
 t/dom.t
+t/je-form-event.html
 t/je.t
 t/js-die.html
 t/js-script.html

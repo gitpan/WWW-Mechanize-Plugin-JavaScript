@@ -97,3 +97,21 @@ use tests 3; # frames
 	ok $js->eval('frames.i === frames[0]'),
 		'the two methods return the same object';
 }
+
+use tests 1; # var statements should create vars (broken in 0.006)
+{
+	ok $js->eval(q|
+		var zarbardar;
+		"zarbardar" in this
+	|), 'var statements without "=" do create the vars';
+}
+
+use tests 1; # form event attributes with unusable scope chains
+{            # (broken in 0.002; fixed in 0.007)
+ $m->get(URI::file->new_abs( 't/je-form-event.html' ));
+ $m->submit_form(
+       form_name => 'y',
+       button    => 'Search Now'
+  );
+ like $m->uri->query, qr/x=lofasz/, 'form event attributes';
+}

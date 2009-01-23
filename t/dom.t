@@ -573,3 +573,52 @@ use tests 3; # location->hash
 	is $l->hash, '#fetvov','location->hash when URL ends with #...';
 	
 }
+
+use tests 1; # gzipped scripts ( bug fixed in 0.010 )
+{
+	package ProtocolThatAlwaysReturnsTheSameThing;
+	use LWP::Protocol;
+	our @ISA = LWP::Protocol::;
+
+	LWP'Protocol'implementor $_ => __PACKAGE__ for qw/ test /;
+
+	sub request {
+		my($self, $request, $proxy, $arg) = @_;
+	
+		my $h = new HTTP::Headers;
+		$h->header('Content-Encoding', 'gzip');
+		my $zhello = join '', map chr hex, qw[
+		 1f 8b 08 00 02 5b 09 49 00 03 cb 48 cd c9 c9 07 00 86 a6
+		 10 36 05 00 00 00
+		];
+		new HTTP::Response 200, 'OK', $h, $zhello
+	}
+}
+{
+ my $output;
+ (my $m = new WWW::Mechanize)->use_plugin('DOM',
+  script_handlers => { default => sub { $output = $_[2] } }
+ ) ;
+ $m->get(data_url '<script src="test://foo/"></script>');
+ is $output, 'hello', 'gzipped scripts';
+}
+
+use tests 3; # timeouts
+{
+	(my $m = new WWW::Mechanize)->use_plugin("JavaScript");
+	$m->get('data:text/html,');
+	my $w = (my $d = $m->plugin("DOM"))->window;
+	my $js = $m->plugin("JavaScript");
+	$js->eval('
+		_ = "nothing"
+		setTimeout("_=42",5000)
+		clearTimeout(setTimeout("_=43",5100))
+	');
+	$d->check_timers;
+	is $js->eval('this._'), 'nothing', 'before timeout';
+	is $d->count_timers, 1, 'count_timers';
+	diag('pausing (timeout test)');
+	sleep 6;
+	$d->check_timers;
+	is $js->eval('_'), '42', 'timeout';
+}

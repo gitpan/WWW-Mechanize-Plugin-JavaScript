@@ -1,8 +1,26 @@
 Revision history for WWW::Mechanize::Plugin::JavaScript and ::DOM
 
+0.008   23 January, 2009
+        The DOM plugin (0.010):
+        • Scripts that are sent with a  transfer  encoding  (such  as
+          gzip) now work.
+        • navigator->appVersion
+        • count_timers
+        The JavaScript plugin:
+        • check_timeouts has been removed.
+        JE backend (0.007):
+        •‘var x;’  now creates the global var instead of being  a  no-
+          op (broken in 0.006).
+        • Event handlers in an event attribute of a <form> element no
+          longer die when variables are named.  (Thanks to  Imre  Rad
+          for alerting me to this.) (This was broken all the way back
+          in version 0.002.)
+
 0.007a  18 October, 2008
         The DOM plugin (0.009):
-        • The location object’s hash method now returns an empty string when there is no fragment, instead of ‘#’ (with warnings).
+        • The  location  object’s  hash  method now returns an  empty
+          string when there is no  fragment,  instead  of  ‘#’  (with
+          warnings).
 
 0.007   15 October, 2008
         The DOM plugin (0.008):
@@ -30,7 +48,7 @@ Revision history for WWW::Mechanize::Plugin::JavaScript and ::DOM
         • Frames (including inline frames) are now supported. The win-
           dow object now has its ‘top’,  ‘frames’ and  ‘length’  meth-
           ods; and you can use it as a hash or array to access frames.
-        • The document object now has its location object set. This
+        • The document object now has its location  object set.  This
           was broken in 0.005. (Thanks to David Williams for noticing
           the bug.)
         The JavaScript plugin:

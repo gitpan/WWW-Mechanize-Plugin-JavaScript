@@ -2,7 +2,7 @@ package WWW::Mechanize::Plugin::DOM::Window;
 
 use strict; use warnings; no warnings qw 'utf8 parenthesis';
 
-our $VERSION = '0.009';
+our $VERSION = '0.010';
 
 use Hash::Util::FieldHash::Compat 'fieldhash';
 use HTML::DOM::Interface 0.019 ':all';
@@ -130,6 +130,18 @@ sub _check_timeouts {
 	return
 }
 
+# ~~~ This may be moved to Plugin::DOM proper later.
+sub _count_timers {
+ 	my $self =  shift;
+	my $t_o = $timeouts{$self->document}||return 0;
+	my $count;
+	for my $id(0..$#$t_o) {
+		next unless $_ = $$t_o[$id];
+		++$count
+	}
+	$count;
+}
+
 sub window { $_[0] }
 *self = *frames = *window;
 sub length { $_[0]->_frames_collection->length }
@@ -176,7 +188,7 @@ use URI;
 use HTML::DOM::Interface qw'STR METHOD VOID';
 use Scalar::Util 'weaken';
 
-our $VERSION = '0.009';
+our $VERSION = '0.010';
 
 use overload fallback => 1, '""' => sub{${+shift}->uri};
 
@@ -311,11 +323,12 @@ package WWW::Mechanize::Plugin::DOM::Navigator;
 use HTML::DOM::Interface qw'STR READONLY';
 use Scalar::Util 'weaken';
 
-our $VERSION = '0.009';
+our $VERSION = '0.010';
 
 $$_{~~__PACKAGE__} = 'Navigator',
 $$_{Navigator} = {
 	appName => STR|READONLY,
+	appVersion => STR|READONLY,
 	userAgent => STR|READONLY,
 }
 for \%WWW::Mechanize::Plugin::DOM::Interface;
@@ -324,6 +337,7 @@ no constant 1.03 ();
 use constant::lexical {
 	mech => 0,
 	name => 1,
+	vers => 2,
 };
 
 sub new {
@@ -339,6 +353,19 @@ sub appName {
 	return $old;
 }
 
+sub appVersion {
+	my $self = shift;
+	my $old = $self->[vers];
+	if(!defined $old) {
+		$old = $self->userAgent;
+		$old =~ /(\d.*)/s
+		? $old = $1
+		: $old = ref($self->[mech])->VERSION;
+	}
+	@_ and $self->[vers] = shift;
+	return $old;
+}
+
 sub userAgent {
 	shift->[mech]->agent;
 }
@@ -349,7 +376,7 @@ sub userAgent {
 #     bit of copy&paste).
 package WWW::Mechanize::Plugin::DOM::Frames;
 
-our $VERSION = '0.009';
+our $VERSION = '0.010';
 
 use HTML::DOM::Collection;
 our @ISA = "HTML::DOM::Collection";
@@ -373,7 +400,7 @@ WWW::Mechanize::Plugin::DOM::Window - Window object for the DOM plugin
 
 =head1 VERSION
 
-Version 0.009
+Version 0.010
 
 =head1 DESCRIPTION
 
@@ -410,8 +437,12 @@ the currently selected file handle, with a line break tacked on the end.
 
 =item navigator
 
-Returns the navigator object. This currently has two properties, C<appName>
-(set to C<ref $mech>) and C<userAgent> (same as C<< $mech->agent >>).
+Returns the navigator object. This currently has three properties, 
+C<appName>
+(set to C<ref $mech>) C<appVersion> (C<< ref($mech)->VERSION >>) and 
+C<userAgent> (same as C<< $mech->agent >>).
+
+You can pass values to C<appName> and C<appVersion> to set them.
 
 =item setTimeout ( $code, $ms );
 

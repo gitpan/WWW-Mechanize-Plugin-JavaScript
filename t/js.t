@@ -47,21 +47,6 @@ use tests 2; # line numbers for inline scripts
 	}
 }
 
-use tests 2; # timeouts
-{
-	$js->eval('
-		_ = "nothing"
-		setTimeout("_=42",5000)
-		clearTimeout(setTimeout("_=43",5100))
-	');
-	$js->check_timeouts;
-	is $js->eval('this._'), 'nothing', 'before timeout';
-	diag('pausing (timeout test)');
-	sleep 6;
-	$js->check_timeouts;
-	is $js->eval('_'), '42', 'timeout';
-}
-
 use tests 1; # screen
 {
 	$js->eval('

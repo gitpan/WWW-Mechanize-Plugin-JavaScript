@@ -8,7 +8,7 @@ use Scalar::Util qw'weaken';
 use URI::Escape 'uri_unescape';
 no WWW::Mechanize ();
 
-our $VERSION = '0.007';
+our $VERSION = '0.008';
 
 # Attribute constants (array indices)
 sub mech() { 0 }
@@ -191,9 +191,6 @@ for(qw/set eval new_function/) {
 	*$_ = eval "sub { shift->_start_engine->$_(\@_) }";
 }
 
-sub check_timeouts {
-	shift->[mech]->plugin("DOM")->check_timers;
-}
 
 # ~~~ This is experimental. The purposed for this is that code that relies
 #     on a particular version of a JS back end can check to see which back
@@ -215,7 +212,7 @@ WWW::Mechanize::Plugin::JavaScript - JavaScript plugin for WWW::Mechanize
 
 =head1 VERSION
 
-Version 0.007 (alpha)
+Version 0.008 (alpha)
 
 =head1 SYNOPSIS
 
@@ -327,15 +324,6 @@ structure described in L<HTML::DOM::Interface>, except that this method
 also accepts a C<< _constructor >> hash element, which should be set to the
 name of the method to be called when the constructor function is called
 within JavaScript; e.g., C<< _constructor => 'new' >>.
-
-=item check_timeouts
-
-This will evaluate the code associated with each timeout registered with 
-the JS C<setTimeout> function,
-if the appropriate interval has elapsed.
-
-B<Warning:> This is deprecated and will be deleted in a future release. Use
-the DOM plugins's C<check_timers> method instead.
 
 =back
 

@@ -4,7 +4,7 @@ package WWW::Mechanize::Plugin::DOM;
 # languages may use DOM as well. Anyone have time to implement Acme::Chef
 # bindings for Mech? :-)
 
-$VERSION = '0.009';
+$VERSION = '0.010';
 
 use 5.006;
 
@@ -152,7 +152,7 @@ sub _parse_html {
 
 			        $code = decode $cs||$elem->charset
 			            ||$tree->charset||'latin1',
-			          $res->content;
+			          $res->decoded_content(charset=>'none');
 			        
 			        
 			        $line = 1;
@@ -339,10 +339,15 @@ sub check_timers {
 	shift->window->_check_timeouts;
 }
 
+sub count_timers {
+	# ~~~ temporary hack
+	shift->window->_count_timers;
+}
+
 
 package WWW::Mechanize::Plugin::DOM::Links;
 
-our$ VERSION = '0.009';
+our$ VERSION = '0.010';
 
 use WWW::Mechanize::Link;
 
@@ -367,7 +372,7 @@ sub EXISTS    { exists ${$_[0]}->links->[$_[1]] }
 
 package WWW::Mechanize::Plugin::DOM::Images;
 
-our$ VERSION = '0.009';
+our$ VERSION = '0.010';
 
 use WWW::Mechanize::Image;
 
@@ -397,7 +402,7 @@ WWW::Mechanize::Plugin::DOM - HTML Document Object Model plugin for Mech
 
 =head1 VERSION
 
-0.009 (alpha)
+0.010 (alpha)
 
 =head1 SYNOPSIS
 
@@ -481,9 +486,6 @@ callback
 routine, don't use a closure, but get it from the C<$mech> object that is
 passed as the first argument.
 
-The line number passed to an event attribute handler requires L<HTML::DOM>
-0.012 or higher. It will be C<undef> will lower versions.
-
 =head1 METHODS
 
 This is the usual boring list of methods. Those that are described above
@@ -502,6 +504,10 @@ This returns the DOM tree (aka the document object).
 This evaluates the code associated with each timeout registered with 
 the window's C<setTimeout> function,
 if the appropriate interval has elapsed.
+
+=item count_timers
+
+This returns the number of timers currently registered.
 
 =item scripts_enabled ( $new_val )
 
