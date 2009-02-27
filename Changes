@@ -1,5 +1,16 @@
 Revision history for WWW::Mechanize::Plugin::JavaScript and ::DOM
 
+0.009   27 February, 2009
+        The DOM plugin (0.011):
+        • Just doc fixes:  The frame features are listed in  ::Window,
+          and a previously fixed bug has been deleted from  the  list.
+        The JavaScript plugin:
+        • <!-- -->  is supported in external JS libraries (RT #43582)
+          and in javascript: URLs.
+        • Trailing --> no longer requires // (RT #43582).
+        • Line numbers are now correct after  a  <!--  with  multiple
+          line breaks before it.
+
 0.008   23 January, 2009
         The DOM plugin (0.010):
         • Scripts that are sent with a  transfer  encoding  (such  as

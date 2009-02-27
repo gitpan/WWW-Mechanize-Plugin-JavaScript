@@ -8,7 +8,7 @@ use Scalar::Util qw'weaken';
 use URI::Escape 'uri_unescape';
 no WWW::Mechanize ();
 
-our $VERSION = '0.008';
+our $VERSION = '0.009';
 
 # Attribute constants (array indices)
 sub mech() { 0 }
@@ -37,16 +37,7 @@ sub init { # expected to return a plugin object that the mech object will
 	my $scripter = sub {
 		my($mech,$doc,$code,$url,$line,$inline) = @_;
 
-		$code =~ s/^\s*<!--[^\cm\cj\x{2028}\x{2029}]*(?x:
-		         )(?:\cm\cj?|[\cj\x{2028}\x{2029}])//
-			and ++$line if $inline;
-
-#warn $code if $inline;
-#warn $url unless $inline;
-		
-		my $be = $mech->plugin('JavaScript')->_start_engine;
-
-		$be->eval($code, $url, $line);
+		$mech->plugin("JavaScript")->eval($code, $url, $line);
 		$@ and $mech->warn($@);
 	};
 
@@ -186,9 +177,25 @@ sub bind_classes {
 	$plugin->[jsbe] && $plugin->[jsbe]->bind_classes($_[0]);
 }
 
-for(qw/set eval new_function/) {
+for(qw/set new_function/) {
 	no strict 'refs';
 	*$_ = eval "sub { shift->_start_engine->$_(\@_) }";
+}
+
+sub eval {
+	my($plugin,$code,$url,$line) = @_;
+
+	if(
+	 $code =~ s/^(\s*)<!--[^\cm\cj\x{2028}\x{2029}]*(?x:
+	         )(?:\cm\cj?|[\cj\x{2028}\x{2029}])//
+	) {
+		$line += 1 + (()= $1 =~ /(\cm\cj?|[\cj\x{2028}\x{2029}])/g)
+	}
+	$code =~ s/-->\s*\z//;
+		
+	my $be = $plugin->_start_engine;
+
+	$be->eval($code, $url, $line);
 }
 
 
@@ -212,7 +219,7 @@ WWW::Mechanize::Plugin::JavaScript - JavaScript plugin for WWW::Mechanize
 
 =head1 VERSION
 
-Version 0.008 (alpha)
+Version 0.009 (alpha)
 
 =head1 SYNOPSIS
 

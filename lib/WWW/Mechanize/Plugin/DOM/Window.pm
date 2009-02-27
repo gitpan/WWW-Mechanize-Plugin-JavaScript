@@ -2,7 +2,7 @@ package WWW::Mechanize::Plugin::DOM::Window;
 
 use strict; use warnings; no warnings qw 'utf8 parenthesis';
 
-our $VERSION = '0.010';
+our $VERSION = '0.011';
 
 use Hash::Util::FieldHash::Compat 'fieldhash';
 use HTML::DOM::Interface 0.019 ':all';
@@ -188,7 +188,7 @@ use URI;
 use HTML::DOM::Interface qw'STR METHOD VOID';
 use Scalar::Util 'weaken';
 
-our $VERSION = '0.010';
+our $VERSION = '0.011';
 
 use overload fallback => 1, '""' => sub{${+shift}->uri};
 
@@ -323,7 +323,7 @@ package WWW::Mechanize::Plugin::DOM::Navigator;
 use HTML::DOM::Interface qw'STR READONLY';
 use Scalar::Util 'weaken';
 
-our $VERSION = '0.010';
+our $VERSION = '0.011';
 
 $$_{~~__PACKAGE__} = 'Navigator',
 $$_{Navigator} = {
@@ -376,7 +376,7 @@ sub userAgent {
 #     bit of copy&paste).
 package WWW::Mechanize::Plugin::DOM::Frames;
 
-our $VERSION = '0.010';
+our $VERSION = '0.011';
 
 use HTML::DOM::Collection;
 our @ISA = "HTML::DOM::Collection";
@@ -400,7 +400,7 @@ WWW::Mechanize::Plugin::DOM::Window - Window object for the DOM plugin
 
 =head1 VERSION
 
-Version 0.010
+Version 0.011
 
 =head1 DESCRIPTION
 
@@ -464,13 +464,24 @@ is equivalent to C<< ->location('foo') >>.
 
 =item self
 
-These two return the window object itself.
+=item frames
+
+These three return the window object itself.
 
 =item mech
 
 This returns the L<WWW::Mechanize> object that corresponds to the window.
 
+=item length
+
+This returns the number of frames.
+
 =back
+
+=head1 FRAMES
+
+You can access frames by index or by name by using the window object as an
+array or hash, respectively.
 
 =head1 THE C<%Interface> HASH
 

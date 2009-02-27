@@ -15,6 +15,14 @@ my $js = (my $m = new WWW::Mechanize)->use_plugin('JavaScript');
 $m->get(URI::file->new_abs( 't/blank.html' ));
 $js->new_function($_ => \&$_) for qw 'is ok';
 
+sub data_url {
+	my $u = new URI 'data:';
+	$u->media_type('text/html');
+	$u->data(shift);
+	$u
+}
+
+
 use tests 1; # class binding bug
 {
 	my $m;
@@ -137,5 +145,53 @@ use tests 1; # non-HTML pages
 	is eval{(my $m = new WWW::Mechanize)->use_plugin('JavaScript')
 	         ->eval("35")}, 35,
 	  'JS is available even when the page is not HTML';
+}
+
+use tests 4; # <!-- -->  (first two tests based on RT #43582 by Imre Rad)
+{
+	my $alert;
+	(my $m = new WWW::Mechanize)->use_plugin(JavaScript =>
+		alert => sub { $alert = shift }
+	);
+
+	$m->get(data_url <<"_");
+<html>
+<head>
+<script type="text/javascript" src="${\data_url(<<'__')}"></script>
+<!--
+window.alert("hello wrodl");
+//-->
+__
+</head>
+<body>
+</body>
+</html>
+_
+	is $alert, "hello wrodl", '<!-- in external JS file';
+
+	$m->get(data_url <<'_');
+<script>
+<!--
+window.alert("foobar");
+-->
+</script>
+_
+	is $alert, "foobar", 'trailing --> without //';
+
+	$m->get('javascript:<!--%0aalert("hoetn")');
+	is $alert, "hoetn", "javascript:<!--%0a URLs";
+
+	my $warning;
+	local $SIG{__WARN__} = sub { $warning = shift;};
+	$m->get(data_url<<'_');
+<title></title>>
+<script type='application/javascript'>
+
+
+<!--
+pweegonk() // line 6
+</script>
+_
+	like $warning, qr/line 6/, 'line numbers after <script>\n\n\n<!--';
 }
 

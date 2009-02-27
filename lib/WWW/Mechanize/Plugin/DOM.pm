@@ -4,7 +4,7 @@ package WWW::Mechanize::Plugin::DOM;
 # languages may use DOM as well. Anyone have time to implement Acme::Chef
 # bindings for Mech? :-)
 
-$VERSION = '0.010';
+$VERSION = '0.011';
 
 use 5.006;
 
@@ -593,11 +593,6 @@ currently creates a brand new DOM object and scripting environment.
 
 There is nothing to prevent infinite recursion when frames have circular
 references.
-
-=item *
-
-Frames each have a Mech object. There is currently no way to get at it
-without breaking encapsulation.
 
 =back
 
