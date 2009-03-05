@@ -74,7 +74,8 @@ http://www-mechanize.googlecode.com/svn/wm/branches/plugins/
 WriteMakefile(
     NAME                => 'WWW::Mechanize::Plugin::JavaScript',
     AUTHOR              => 'Father Chrysostomos <sprout & cpan . org>',
-    VERSION_FROM        => 'lib/WWW/Mechanize/Plugin/JavaScript.pm',
+#    VERSION_FROM        => 'lib/WWW/Mechanize/Plugin/JavaScript.pm',
+    VERSION             => '0.009a',
     ABSTRACT_FROM       => 'lib/WWW/Mechanize/Plugin/JavaScript.pm',
     PL_FILES            => {},
     PREREQ_PM           => \%prq,

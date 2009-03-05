@@ -622,3 +622,27 @@ use tests 3; # timeouts
 	$d->check_timers;
 	is $js->eval('_'), '42', 'timeout';
 }
+
+use tests 3; # nested frames
+{
+	my $script;
+	(my $m = new WWW::Mechanize)->use_plugin('DOM') ;
+	my $inner_frame_url = data_url "blah blah blah";
+	my $outer_frame_url = data_url <<END;
+		<iframe id=innerframe src="$inner_frame_url">
+END
+	my $top_url = data_url <<END;
+		<iframe id=outerframe src="$outer_frame_url">
+END
+	$m->get($top_url);
+
+	my $w = $m->plugin("DOM")->window;
+
+
+	is $w->{outerframe}{innerframe}->top, $w,
+	 'top property accessed from nested frame';
+
+	is $w->{outerframe}{innerframe}->parent, $w->{outerframe},
+	 'parent of inner frame';
+	is $w->parent, $w, 'top-level window is its own parent';
+}

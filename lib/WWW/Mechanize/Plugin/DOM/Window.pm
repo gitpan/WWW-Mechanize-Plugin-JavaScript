@@ -2,7 +2,7 @@ package WWW::Mechanize::Plugin::DOM::Window;
 
 use strict; use warnings; no warnings qw 'utf8 parenthesis';
 
-our $VERSION = '0.011';
+our $VERSION = '0.012';
 
 use Hash::Util::FieldHash::Compat 'fieldhash';
 use HTML::DOM::Interface 0.019 ':all';
@@ -17,7 +17,7 @@ our @ISA = qw[ HTML::DOM::View
 no constant 1.03 ();
 use constant::lexical +{ do {
 	my $x; map +($_=>$x++), qw[
-		lert cnfm prmp loco meck topp frms
+		lert cnfm prmp loco meck topp frms prnt
 	]  # we use ‘meck’ so as not to conflict with the method
 }};
 
@@ -148,10 +148,23 @@ sub length { $_[0]->_frames_collection->length }
 
 sub top {
 	my $self = shift;
-	$$self->[topp] || $self;
+	$$self->[topp] || do {
+		my $parent = $self;
+		while() {
+			$$parent->[prnt] or
+			 weaken( $$self->[topp] = $parent), last;
+			$parent = $$parent->[prnt];
+		}
+		$$self->[topp]
+	};
 }
 
-sub _set_top { ${$_[0]}->[topp] = $_[1] }
+sub parent {
+	my $self = shift;
+	$$self->[prnt] || $self;
+}
+
+sub _set_parent { weaken( ${$_[0]}->[prnt] = $_[1] ) }
 
 sub event_listeners_enabled {
 	${+shift}->[meck]->plugin("DOM")->scripts_enabled
@@ -188,7 +201,7 @@ use URI;
 use HTML::DOM::Interface qw'STR METHOD VOID';
 use Scalar::Util 'weaken';
 
-our $VERSION = '0.011';
+our $VERSION = '0.012';
 
 use overload fallback => 1, '""' => sub{${+shift}->uri};
 
@@ -323,7 +336,7 @@ package WWW::Mechanize::Plugin::DOM::Navigator;
 use HTML::DOM::Interface qw'STR READONLY';
 use Scalar::Util 'weaken';
 
-our $VERSION = '0.011';
+our $VERSION = '0.012';
 
 $$_{~~__PACKAGE__} = 'Navigator',
 $$_{Navigator} = {
@@ -376,7 +389,7 @@ sub userAgent {
 #     bit of copy&paste).
 package WWW::Mechanize::Plugin::DOM::Frames;
 
-our $VERSION = '0.011';
+our $VERSION = '0.012';
 
 use HTML::DOM::Collection;
 our @ISA = "HTML::DOM::Collection";
@@ -400,7 +413,7 @@ WWW::Mechanize::Plugin::DOM::Window - Window object for the DOM plugin
 
 =head1 VERSION
 
-Version 0.011
+Version 0.012
 
 =head1 DESCRIPTION
 
@@ -467,6 +480,16 @@ is equivalent to C<< ->location('foo') >>.
 =item frames
 
 These three return the window object itself.
+
+=item top
+
+Returns the 'top' window, which is the window itself if there are no
+frames.
+
+=item parent
+
+Returns the parent frame, if there is one, or the window object itself
+otherwise.
 
 =item mech
 

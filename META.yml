@@ -1,8 +1,8 @@
 # http://module-build.sourceforge.net/META-spec.html
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         WWW-Mechanize-Plugin-JavaScript
-version:      0.009
-version_from: lib/WWW/Mechanize/Plugin/JavaScript.pm
+version:      0.009a
+version_from: 
 installdirs:  site
 requires:
     Carp:                          0

@@ -4,7 +4,7 @@ package WWW::Mechanize::Plugin::DOM;
 # languages may use DOM as well. Anyone have time to implement Acme::Chef
 # bindings for Mech? :-)
 
-$VERSION = '0.011';
+$VERSION = '0.012';
 
 use 5.006;
 
@@ -248,7 +248,7 @@ sub _parse_html {
 		# won’t have any strong refs at all:
 		$mech_per_frame{$elem} = $m;
 		$elem->contentWindow(my $subwin=$m->plugin("DOM")->window);
-		$subwin->_set_top(my $top = $doc->defaultView);
+		$subwin->_set_parent($doc->defaultView);
 		defined(my $src = $elem->src) or return;
 		$m->get(new_abs URI $src, $mech->base);
 	});
@@ -347,7 +347,7 @@ sub count_timers {
 
 package WWW::Mechanize::Plugin::DOM::Links;
 
-our$ VERSION = '0.010';
+our$ VERSION = '0.012';
 
 use WWW::Mechanize::Link;
 
@@ -372,7 +372,7 @@ sub EXISTS    { exists ${$_[0]}->links->[$_[1]] }
 
 package WWW::Mechanize::Plugin::DOM::Images;
 
-our$ VERSION = '0.010';
+our$ VERSION = '0.012';
 
 use WWW::Mechanize::Image;
 
@@ -402,7 +402,7 @@ WWW::Mechanize::Plugin::DOM - HTML Document Object Model plugin for Mech
 
 =head1 VERSION
 
-0.010 (alpha)
+0.012 (alpha)
 
 =head1 SYNOPSIS
 
