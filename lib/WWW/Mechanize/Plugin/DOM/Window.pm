@@ -46,6 +46,7 @@ our %Interface = (
 	top => OBJ|READONLY,
 	frames => OBJ|READONLY,
 	length => NUM|READONLY,
+	parent => OBJ|READONLY,
 );
 
 sub new {

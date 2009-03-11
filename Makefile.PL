@@ -75,7 +75,7 @@ WriteMakefile(
     NAME                => 'WWW::Mechanize::Plugin::JavaScript',
     AUTHOR              => 'Father Chrysostomos <sprout & cpan . org>',
 #    VERSION_FROM        => 'lib/WWW/Mechanize/Plugin/JavaScript.pm',
-    VERSION             => '0.009a',
+    VERSION             => "0.009b",
     ABSTRACT_FROM       => 'lib/WWW/Mechanize/Plugin/JavaScript.pm',
     PL_FILES            => {},
     PREREQ_PM           => \%prq,

@@ -1,10 +1,10 @@
-WWW-Mechanize-Plugin-JavaScript-0.009 (alpha)
+WWW-Mechanize-Plugin-JavaScript-0.009b (alpha)
 
 Plugins for WWW::Mechanize that provide HTML DOM and Java-
 Script support.
 
 This distribution contains:
-• WWW::Mechanize::Plugin::DOM            0.012
+• WWW::Mechanize::Plugin::DOM            0.013
 • WWW::Mechanize::Plugin::JavaScript     0.009
 • WWW::Mechanize::Plugin::JavaScript::JE 0.007
 
@@ -12,6 +12,11 @@ This distribution contains:
 RECENT CHANGES
 
 (See the Changes file for the long version.)
+
+0.009b
+------
+• parent has been added to
+  %WWW::Mechanize::Plugin::DOM::Window::Interface  (RT  #43582 again).
 
 0.009a
 ------
@@ -23,18 +28,6 @@ RECENT CHANGES
 -----
 • <!-- and --> script delimiters are more fully supported (RT #43582).
 • DOM plugin doc fixes pertaining to frames
-
-0.008
------
-• Scripts that are sent with  a  transfer  encoding  (such  as  gzip)
-  now work.
-• navigator.appVersion
-• $dom_plugin->count_timers
-• check_timeouts has been removed from the JavaScript plugin.
-•‘var x;’ now creates the global var instead of being a no-op.
-• Event handlers in an event attribute of a <form>  element no longer
-  die when variables are named.  (Thanks to  Imre  Rad  for  alerting
-  me to this.)
 
 
 INSTALLATION

@@ -9,6 +9,7 @@ t/blank.html
 t/dom-callbacks.html
 t/dom-charset.html
 t/dom-charset2.html
+t/dom-interface.t
 t/dom-no-lang.html
 t/dom-onload.html
 t/dom-require.t
