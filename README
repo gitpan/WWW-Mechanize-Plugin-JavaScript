@@ -1,19 +1,27 @@
-WWW-Mechanize-Plugin-JavaScript-0.009b (alpha)
+WWW-Mechanize-Plugin-JavaScript-0.010 (alpha)
 
 Plugins for WWW::Mechanize that provide HTML DOM and Java-
 Script support.
 
+THESE MODULES ARE DEPRECATED. Please use WWW::Scripter and
+WWW::Scripter::Plugin::JavaScript instead.
+
 This distribution contains:
-• WWW::Mechanize::Plugin::DOM            0.013
-• WWW::Mechanize::Plugin::JavaScript     0.009
-• WWW::Mechanize::Plugin::JavaScript::JE 0.007
+• WWW::Mechanize::Plugin::DOM            0.014
+• WWW::Mechanize::Plugin::JavaScript     0.010
+• WWW::Mechanize::Plugin::JavaScript::JE 0.008
 
 
 RECENT CHANGES
 
 (See the Changes file for the long version.)
 
-0.009b
+0.010
+-----
+The only difference in this release is that there are big deprecation
+notices all over the place.
+
+0.009c
 ------
 • parent has been added to
   %WWW::Mechanize::Plugin::DOM::Window::Interface  (RT  #43582 again).
@@ -23,11 +31,6 @@ RECENT CHANGES
 • window->top  now actually  returns  the  top  window,  rather  than
   the parent.
 • window->parent has been added (RT #43582 again).
-
-0.009
------
-• <!-- and --> script delimiters are more fully supported (RT #43582).
-• DOM plugin doc fixes pertaining to frames
 
 
 INSTALLATION

@@ -1,5 +1,14 @@
 #!/usr/bin/perl
 
+warn <<_;
+
+***************************************************************
+THIS SET OF MODULES IS DEPRECATED. Please use WWW::Scripter and
+WWW::Scripter::Plugin::JavaScript instead.
+***************************************************************
+
+_
+
 BEGIN{ require 5.006; }
 use ExtUtils::MakeMaker;
 
@@ -74,8 +83,8 @@ http://www-mechanize.googlecode.com/svn/wm/branches/plugins/
 WriteMakefile(
     NAME                => 'WWW::Mechanize::Plugin::JavaScript',
     AUTHOR              => 'Father Chrysostomos <sprout & cpan . org>',
-#    VERSION_FROM        => 'lib/WWW/Mechanize/Plugin/JavaScript.pm',
-    VERSION             => "0.009c",
+    VERSION_FROM        => 'lib/WWW/Mechanize/Plugin/JavaScript.pm',
+#    VERSION             => "0.009c",
     ABSTRACT_FROM       => 'lib/WWW/Mechanize/Plugin/JavaScript.pm',
     PL_FILES            => {},
     PREREQ_PM           => \%prq,

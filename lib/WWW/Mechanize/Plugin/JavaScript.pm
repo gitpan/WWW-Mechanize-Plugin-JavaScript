@@ -8,7 +8,7 @@ use Scalar::Util qw'weaken';
 use URI::Escape 'uri_unescape';
 no WWW::Mechanize ();
 
-our $VERSION = '0.009';
+our $VERSION = '0.010';
 
 # Attribute constants (array indices)
 sub mech() { 0 }
@@ -219,7 +219,10 @@ WWW::Mechanize::Plugin::JavaScript - JavaScript plugin for WWW::Mechanize
 
 =head1 VERSION
 
-Version 0.009 (alpha)
+Version 0.010 (alpha)
+
+THIS MODULE IS DEPRECATED. Please use L<WWW::Scripter::Plugin::JavaScript> 
+instead.
 
 =head1 SYNOPSIS
 

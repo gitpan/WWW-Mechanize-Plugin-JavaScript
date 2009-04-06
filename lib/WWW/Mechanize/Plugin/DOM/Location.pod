@@ -5,7 +5,9 @@ WWW::Mechanize::Plugin::DOM::Location - Location object for the DOM plugin
 
 =head1 VERSION
 
-Version 0.013
+Version 0.014
+
+THIS MODULE IS DEPRECATED. Please use L<WWW::Scripter> instead.
 
 =head1 METHODS
 

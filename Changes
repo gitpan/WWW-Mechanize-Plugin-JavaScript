@@ -1,10 +1,17 @@
 Revision history for WWW::Mechanize::Plugin::JavaScript and ::DOM
 
-0.009b  11 March, 2009
+0.010   5 April, 2009
+        The only difference in this release is that there are big dep-
+        recation notices all over the place.
+
+0.009c  11 March, 2009
         The DOM plugin (0.013):
         • parent has been added to
           %WWW::Mechanize::Plugin::DOM::Window::Interface (RT
           #43582 again).
+
+0.009b  11 March, 2009
+        An upload mistake. Please ignore.
 
 0.009a  5 March, 2009
         The DOM plugin (0.012):

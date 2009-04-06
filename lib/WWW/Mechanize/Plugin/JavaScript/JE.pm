@@ -10,7 +10,7 @@ use JE 0.022;
 use Scalar::Util qw'weaken';
 use WWW::Mechanize::Plugin::DOM;
 
-our $VERSION = '0.007';
+our $VERSION = '0.008';
 our @ISA = 'JE';
 
 fieldhash my %parathia;
@@ -287,7 +287,10 @@ WWW::Mechanize::Plugin::JavaScript::JE - JE backend for WMPJS
 
 =head1 VERSION
 
-0.007 (alpha)
+0.008 (alpha)
+
+THIS MODULE IS DEPRECATED. Please use 
+L<WWW::Scripter::Plugin::JavaScript::JE> instead.
 
 =head1 DESCRIPTION
 
